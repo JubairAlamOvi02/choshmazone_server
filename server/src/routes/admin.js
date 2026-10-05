@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { query } from '../config/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 
@@ -10,7 +10,7 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
         const [ordersRes, productsRes, customersRes] = await Promise.all([
             query('SELECT id, total_amount, status, created_at FROM orders ORDER BY created_at ASC'),
             query('SELECT COUNT(*) as count FROM products'),
-            query(SELECT COUNT(*) as count FROM users WHERE role = 'customer')
+            query("SELECT COUNT(*) as count FROM users WHERE role = 'customer'")
         ]);
 
         const orders = ordersRes.rows;
@@ -52,7 +52,7 @@ router.get('/stats', verifyToken, requireAdmin, async (req, res) => {
 // Admin Customers List with aggregates
 router.get('/customers', verifyToken, requireAdmin, async (req, res) => {
     try {
-        const sql = 
+        const sql = `
             SELECT 
                 u.id, u.email, u.full_name, u.role, u.created_at,
                 COUNT(o.id) as orders_count,
@@ -63,14 +63,13 @@ router.get('/customers', verifyToken, requireAdmin, async (req, res) => {
             WHERE u.role = 'customer'
             GROUP BY u.id
             ORDER BY u.created_at DESC
-        ;
+        `;
         const result = await query(sql);
         res.json(result.rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-
 
 // Update customer role (Admin)
 router.put('/customers/:id/role', verifyToken, requireAdmin, async (req, res) => {

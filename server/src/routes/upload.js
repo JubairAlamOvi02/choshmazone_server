@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { upload } from '../middleware/upload.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 
@@ -9,7 +9,7 @@ router.post('/', verifyToken, requireAdmin, upload.single('file'), (req, res) =>
     if (!req.file) {
         return res.status(400).json({ error: 'No image file uploaded.' });
     }
-    const relativeUrl = /uploads/;
+    const relativeUrl = `/uploads/${req.file.filename}`;
     res.json({
         url: relativeUrl,
         filename: req.file.filename,
@@ -22,7 +22,7 @@ router.post('/multiple', verifyToken, requireAdmin, upload.array('files', 10), (
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded.' });
     }
-    const urls = req.files.map(f => /uploads/);
+    const urls = req.files.map(f => `/uploads/${f.filename}`);
     res.json({ urls });
 });
 

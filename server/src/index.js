@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -67,9 +67,9 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(===============================================);
-    console.log(🚀 Choshmazone Backend running on port );
-    console.log(🌐 Base URL: http://localhost:);
-    console.log(📁 Uploads served at: http://localhost:/uploads);
-    console.log(===============================================);
+    console.log('===============================================');
+    console.log(`🚀 Choshmazone Backend running on port ${PORT}`);
+    console.log(`🌐 Base URL: http://localhost:${PORT}`);
+    console.log(`📁 Uploads served at: http://localhost:${PORT}/uploads`);
+    console.log('===============================================');
 });

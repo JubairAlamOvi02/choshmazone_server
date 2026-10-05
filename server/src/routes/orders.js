@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { query, pool } from '../config/db.js';
 import { verifyToken, optionalAuth, requireAdmin } from '../middleware/auth.js';
 
@@ -12,22 +12,22 @@ const notifyTelegram = async (order, items) => {
 
     try {
         const address = order.shipping_address || {};
-        const itemsList = items.map(i => •  (Qty: ) - ৳).join('\n');
-        const text = 🛒 *NEW ORDER RECEIVED!*
+        const itemsList = items.map(i => `• ${i.name || i.title || 'Item'} (Qty: ${i.quantity || 1}) - ৳${(i.price || i.unit_price || 0) * (i.quantity || 1)}`).join('\n');
+        const text = `🛒 *NEW ORDER RECEIVED!*
 ━━━━━━━━━━━━━━━━━━
-*Order ID:* \${order.id.slice(0, 8).toUpperCase()}\
-*Total Amount:* ৳
-*Payment:* 
+*Order ID:* \`${order.id ? order.id.slice(0, 8).toUpperCase() : 'N/A'}\`
+*Total Amount:* ৳${order.total_amount}
+*Payment:* ${order.payment_method || 'COD'}
 
-*Customer:* 
-*Phone:* 
-*Address:* , 
+*Customer:* ${address.name || 'N/A'}
+*Phone:* ${address.phone || 'N/A'}
+*Address:* ${address.address || ''}, ${address.district || address.city || ''}
 
 *Items:*
+${itemsList}
+━━━━━━━━━━━━━━━━━━`;
 
-━━━━━━━━━━━━━━━━━━;
-
-        await fetch(https://api.telegram.org/bot/sendMessage, {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -56,8 +56,8 @@ const syncGoogleSheet = async (order, items) => {
             payment_method: order.payment_method,
             customer_name: address.name,
             phone: address.phone,
-            address: ${address.address || ''}, , ,
-            items: items.map(i => ${i.name} (x)).join(', ')
+            address: `${address.address || ''}, ${address.district || address.city || ''}`,
+            items: items.map(i => `${i.name || i.title || 'Item'} (x${i.quantity || 1})`).join(', ')
         };
 
         await fetch(url, {
@@ -83,11 +83,11 @@ router.post('/', optionalAuth, async (req, res) => {
             return res.status(400).json({ error: 'Missing required order fields.' });
         }
 
-        const orderSql = 
+        const orderSql = `
             INSERT INTO orders (user_id, total_amount, shipping_address, payment_method, payment_details, status)
-            VALUES (, , , , , 'pending')
+            VALUES ($1, $2, $3, $4, $5, 'pending')
             RETURNING *
-        ;
+        `;
         const orderRes = await client.query(orderSql, [
             userId,
             total_amount,
@@ -104,10 +104,10 @@ router.post('/', optionalAuth, async (req, res) => {
             const style = item.style || 'Default';
             const unitPrice = item.price || item.unit_price;
 
-            await client.query(
+            await client.query(`
                 INSERT INTO order_items (order_id, product_id, quantity, unit_price, style)
-                VALUES (, , , , )
-            , [order.id, productId, item.quantity, unitPrice, style]);
+                VALUES ($1, $2, $3, $4, $5)
+            `, [order.id, productId, item.quantity, unitPrice, style]);
         }
 
         await client.query('COMMIT');
@@ -130,7 +130,7 @@ router.post('/', optionalAuth, async (req, res) => {
 router.get('/recent-purchased', async (req, res) => {
     try {
         const limit = parseInt(req.query.limit || '4', 10);
-        const sql = 
+        const sql = `
             SELECT 
                 oi.id, oi.created_at,
                 p.id as product_id, p.name, p.price, p.image_url, p.images, p.category, p.variants
@@ -139,8 +139,8 @@ router.get('/recent-purchased', async (req, res) => {
             JOIN products p ON oi.product_id = p.id
             WHERE p.is_active = TRUE AND o.status != 'cancelled'
             ORDER BY oi.created_at DESC
-            LIMIT 
-        ;
+            LIMIT $1
+        `;
         const result = await query(sql, [limit * 2]);
         
         const seen = new Set();
@@ -181,7 +181,7 @@ router.get('/track', async (req, res) => {
         const trimmed = searchQuery.trim();
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed);
 
-        let sql = 
+        let sql = `
             SELECT o.*, 
                    json_agg(
                        json_build_object(
@@ -195,15 +195,15 @@ router.get('/track', async (req, res) => {
             FROM orders o
             LEFT JOIN order_items oi ON oi.order_id = o.id
             LEFT JOIN products p ON oi.product_id = p.id
-        ;
+        `;
 
         let params = [];
         if (isUUID) {
-            sql += ' WHERE o.id = ';
+            sql += ' WHERE o.id = $1';
             params.push(trimmed);
         } else {
-            sql +=  WHERE o.shipping_address->>'phone' ILIKE ;
-            params.push(%%);
+            sql += " WHERE o.shipping_address->>'phone' ILIKE $1";
+            params.push(`%${trimmed}%`);
         }
 
         sql += ' GROUP BY o.id ORDER BY o.created_at DESC';
@@ -218,7 +218,7 @@ router.get('/track', async (req, res) => {
 // Fetch user's own orders
 router.get('/my', verifyToken, async (req, res) => {
     try {
-        const sql = 
+        const sql = `
             SELECT o.*, 
                    json_agg(
                        json_build_object(
@@ -232,10 +232,10 @@ router.get('/my', verifyToken, async (req, res) => {
             FROM orders o
             LEFT JOIN order_items oi ON oi.order_id = o.id
             LEFT JOIN products p ON oi.product_id = p.id
-            WHERE o.user_id = 
+            WHERE o.user_id = $1
             GROUP BY o.id
             ORDER BY o.created_at DESC
-        ;
+        `;
         const result = await query(sql, [req.user.id]);
         res.json(result.rows);
     } catch (err) {
@@ -246,7 +246,7 @@ router.get('/my', verifyToken, async (req, res) => {
 // Admin: Fetch all orders
 router.get('/', verifyToken, requireAdmin, async (req, res) => {
     try {
-        const sql = 
+        const sql = `
             SELECT o.*, 
                    u.full_name as customer_name, u.email as customer_email,
                    json_agg(
@@ -264,7 +264,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
             LEFT JOIN products p ON oi.product_id = p.id
             GROUP BY o.id, u.id
             ORDER BY o.created_at DESC
-        ;
+        `;
         const result = await query(sql);
         res.json(result.rows);
     } catch (err) {
@@ -276,7 +276,7 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
 router.get('/:id', optionalAuth, async (req, res) => {
     try {
         const { id } = req.params;
-        const sql = 
+        const sql = `
             SELECT o.*, 
                    u.full_name as customer_name, u.email as customer_email,
                    json_agg(
@@ -292,9 +292,9 @@ router.get('/:id', optionalAuth, async (req, res) => {
             LEFT JOIN users u ON o.user_id = u.id
             LEFT JOIN order_items oi ON oi.order_id = o.id
             LEFT JOIN products p ON oi.product_id = p.id
-            WHERE o.id = 
+            WHERE o.id = $1
             GROUP BY o.id, u.id
-        ;
+        `;
         const result = await query(sql, [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Order not found.' });
@@ -317,7 +317,7 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
         }
 
         const result = await query(
-            'UPDATE orders SET status =  WHERE id =  RETURNING *',
+            'UPDATE orders SET status = $1 WHERE id = $2 RETURNING *',
             [status, id]
         );
 
@@ -335,7 +335,7 @@ router.put('/:id/status', verifyToken, requireAdmin, async (req, res) => {
 router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await query('DELETE FROM orders WHERE id =  RETURNING id', [id]);
+        const result = await query('DELETE FROM orders WHERE id = $1 RETURNING id', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Order not found.' });
         }

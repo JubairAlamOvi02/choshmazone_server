@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { query } from '../config/db.js';
 import { verifyToken, requireAdmin } from '../middleware/auth.js';
 
@@ -32,7 +32,7 @@ router.post('/', verifyToken, requireAdmin, async (req, res) => {
         const active = is_active !== undefined ? is_active : true;
 
         const result = await query(
-            'INSERT INTO categories (name, slug, description, image_url, is_active) VALUES (, , , , ) RETURNING *',
+            'INSERT INTO categories (name, slug, description, image_url, is_active) VALUES ($1, $2, $3, $4, $5) RETURNING *',
             [name, generatedSlug, description || null, image_url || null, active]
         );
 
@@ -52,19 +52,18 @@ router.put('/:id', verifyToken, requireAdmin, async (req, res) => {
         const values = [];
         let counter = 1;
 
-        if (name !== undefined) { updates.push(
-ame = {counter++}); values.push(name); }
-        if (slug !== undefined) { updates.push(slug = {counter++}); values.push(slug); }
-        if (description !== undefined) { updates.push(description = {counter++}); values.push(description); }
-        if (image_url !== undefined) { updates.push(image_url = {counter++}); values.push(image_url); }
-        if (is_active !== undefined) { updates.push(is_active = {counter++}); values.push(is_active); }
+        if (name !== undefined) { updates.push(`name = $${counter++}`); values.push(name); }
+        if (slug !== undefined) { updates.push(`slug = $${counter++}`); values.push(slug); }
+        if (description !== undefined) { updates.push(`description = $${counter++}`); values.push(description); }
+        if (image_url !== undefined) { updates.push(`image_url = $${counter++}`); values.push(image_url); }
+        if (is_active !== undefined) { updates.push(`is_active = $${counter++}`); values.push(is_active); }
 
         if (updates.length === 0) {
             return res.status(400).json({ error: 'No fields provided.' });
         }
 
         values.push(id);
-        const sql = UPDATE categories SET  WHERE id = {counter} RETURNING *;
+        const sql = `UPDATE categories SET ${updates.join(', ')} WHERE id = $${counter} RETURNING *`;
         const result = await query(sql, values);
 
         if (result.rows.length === 0) {
@@ -81,7 +80,7 @@ ame = {counter++}); values.push(name); }
 router.delete('/:id', verifyToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await query('DELETE FROM categories WHERE id =  RETURNING id', [id]);
+        const result = await query('DELETE FROM categories WHERE id = $1 RETURNING id', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Category not found.' });
         }

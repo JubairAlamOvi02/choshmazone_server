@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { query } from '../config/db.js';
 import { optionalAuth } from '../middleware/auth.js';
 
@@ -8,14 +8,14 @@ const router = express.Router();
 router.get('/product/:productId', async (req, res) => {
     try {
         const { productId } = req.params;
-        const sql = 
+        const sql = `
             SELECT r.*, 
                    COALESCE(r.user_name, u.full_name, 'Verified Customer') as reviewer_name
             FROM reviews r
             LEFT JOIN users u ON r.user_id = u.id
-            WHERE r.product_id = 
+            WHERE r.product_id = $1
             ORDER BY r.created_at DESC
-        ;
+        `;
         const result = await query(sql, [productId]);
         
         const mapped = result.rows.map(r => ({
@@ -39,11 +39,11 @@ router.post('/', optionalAuth, async (req, res) => {
             return res.status(400).json({ error: 'Product ID and rating are required.' });
         }
 
-        const sql = 
+        const sql = `
             INSERT INTO reviews (product_id, user_id, user_name, rating, comment)
-            VALUES (, , , , )
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
-        ;
+        `;
         const result = await query(sql, [
             product_id,
             userId,

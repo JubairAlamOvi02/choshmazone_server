@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import { query } from '../config/db.js';
 import { optionalAuth, verifyToken, requireAdmin } from '../middleware/auth.js';
 
@@ -19,13 +19,13 @@ router.post('/session', optionalAuth, async (req, res) => {
 
         const userId = req.user ? req.user.id : null;
 
-        const sql = 
+        const sql = `
             INSERT INTO visitor_sessions (
                 id, visitor_id, user_id, first_page, last_page, referrer,
                 device_type, browser, operating_system, ip_address,
                 city, region, country, isp, started_at, last_active_at, page_views_count
             ) VALUES (
-                , , , , , , , , , , , , , , NOW(), NOW(), 1
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW(), 1
             )
             ON CONFLICT (id) DO UPDATE SET
                 last_page = COALESCE(EXCLUDED.last_page, visitor_sessions.last_page),
@@ -33,7 +33,7 @@ router.post('/session', optionalAuth, async (req, res) => {
                 last_active_at = NOW(),
                 page_views_count = visitor_sessions.page_views_count + 1
             RETURNING *
-        ;
+        `;
 
         const result = await query(sql, [
             session_id, visitor_id, userId, first_page || '/', last_page || '/',
@@ -61,11 +61,11 @@ router.post('/event', optionalAuth, async (req, res) => {
         const metaJson = typeof metadata === 'object' ? JSON.stringify(metadata) : '{}';
 
         // 1. Insert event
-        const eventSql = 
+        const eventSql = `
             INSERT INTO web_events (session_id, visitor_id, user_id, event_type, path, page_title, metadata, device_type)
-            VALUES (, , , , , , , )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
-        ;
+        `;
         const eventRes = await query(eventSql, [
             session_id, visitor_id, userId, event_type, path || '/',
             page_title || '', metaJson, device_type || 'desktop'
@@ -82,18 +82,18 @@ router.post('/event', optionalAuth, async (req, res) => {
         if (event_type === 'purchase') {
             updateFlags.push('has_purchased = TRUE');
             if (metadata && metadata.total_amount) {
-                updateFlags.push(	otal_purchased_amount = {counter++});
+                updateFlags.push(`total_purchased_amount = $${counter++}`);
                 params.push(metadata.total_amount);
             }
             if (metadata && metadata.order_id) {
-                updateFlags.push(order_id = {counter++});
+                updateFlags.push(`order_id = $${counter++}`);
                 params.push(metadata.order_id);
             }
         }
 
         if (updateFlags.length > 0) {
             updateFlags.push('last_active_at = NOW()');
-            const sessionSql = UPDATE visitor_sessions SET  WHERE id = ;
+            const sessionSql = `UPDATE visitor_sessions SET ${updateFlags.join(', ')} WHERE id = $1`;
             await query(sessionSql, params);
         }
 
@@ -111,10 +111,10 @@ router.get('/sessions', verifyToken, requireAdmin, async (req, res) => {
         let sql = 'SELECT * FROM visitor_sessions';
         const params = [];
         if (startDate) {
-            sql += ' WHERE started_at >= ';
+            sql += ' WHERE started_at >= $1';
             params.push(startDate);
         }
-        sql +=  ORDER BY started_at DESC LIMIT {params.length + 1};
+        sql += ` ORDER BY started_at DESC LIMIT $${params.length + 1}`;
         params.push(parseInt(limit, 10));
 
         const result = await query(sql, params);
@@ -131,10 +131,10 @@ router.get('/events', verifyToken, requireAdmin, async (req, res) => {
         let sql = 'SELECT * FROM web_events';
         const params = [];
         if (startDate) {
-            sql += ' WHERE created_at >= ';
+            sql += ' WHERE created_at >= $1';
             params.push(startDate);
         }
-        sql +=  ORDER BY created_at DESC LIMIT {params.length + 1};
+        sql += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
         params.push(parseInt(limit, 10));
 
         const result = await query(sql, params);
