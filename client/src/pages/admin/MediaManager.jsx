@@ -25,7 +25,7 @@ const AdminMedia = () => {
         hero_banner_badge: 'Elite Vision • Luxury Style',
         hero_banner_title: 'See the World',
         hero_banner_highlight: 'Clearly',
-        hero_banner_description: 'Experience premium vision with our handcrafted eyewear collection, designed for those who demand the perfect blend of performance and luxury.',
+        hero_banner_description: 'Premium eyewear, Stylish look আর Clear vision — সব একসাথে।',
         hero_banner_btn_text: 'Shop Collection',
         hero_banner_btn_link: '/shop',
         hero_banner_btn_style: 'dark',
@@ -435,7 +435,7 @@ USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'a
                                         rows={3}
                                         value={getSettingValue('hero_banner_description')}
                                         onChange={(e) => handleTextChange('hero_banner_description', e.target.value)}
-                                        placeholder="e.g. Experience premium vision with our handcrafted eyewear collection..."
+                                        placeholder="e.g. Premium eyewear, Stylish look আর Clear vision — সব একসাথে।"
                                         className="w-full px-4 py-3 bg-gray-50 border border-border rounded-xl text-sm font-outfit focus:bg-white focus:border-primary outline-none transition-all resize-none"
                                     />
                                 </div>
@@ -584,7 +584,7 @@ USING (EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'a
                                         </h3>
 
                                         <p className="text-xs sm:text-sm text-white/90 font-outfit mb-6 line-clamp-3 leading-relaxed drop-shadow">
-                                            {getSettingValue('hero_banner_description') || 'Experience premium vision with our handcrafted eyewear collection, designed for those who demand the perfect blend of performance and luxury.'}
+                                            {getSettingValue('hero_banner_description') || 'Premium eyewear, Stylish look আর Clear vision — সব একসাথে।'}
                                         </p>
 
                                         <div className="inline-block">

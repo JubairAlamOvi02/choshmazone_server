@@ -46,7 +46,7 @@ const Hero = () => {
             badge: cachedBadge !== null && cachedBadge !== undefined ? cachedBadge : 'Elite Vision • Luxury Style',
             title: cachedTitle || 'See the World',
             highlight: cachedHighlight !== null && cachedHighlight !== undefined ? cachedHighlight : 'Clearly',
-            description: cachedDescription || 'Experience premium vision with our handcrafted eyewear collection, designed for those who demand the perfect blend of performance and luxury.',
+            description: cachedDescription || 'Premium eyewear, Stylish look আর Clear vision — সব একসাথে।',
             btnText: cachedBtnText || 'Shop Collection',
             btnLink: cachedBtnLink || '/shop',
             btnStyle: cachedBtnStyle || 'dark',
