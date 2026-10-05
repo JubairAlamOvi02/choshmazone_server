@@ -1,0 +1,83 @@
+﻿# ==============================================================================
+# Nginx Configuration for Choshmazone on Hostinger KVM 1 VPS
+# Place this at: /etc/nginx/sites-available/choshmazone
+# Symlink to:   /etc/nginx/sites-enabled/choshmazone
+# ==============================================================================
+
+# HTTP Server - Redirects to HTTPS
+server {
+    listen 80;
+    listen [::]:80;
+    server_name yourdomain.com www.yourdomain.com;
+
+    # Certbot challenge directory
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    # Redirect all HTTP requests to HTTPS
+    location / {
+        return 301 https://System.Management.Automation.Internal.Host.InternalHost;
+    }
+}
+
+# HTTPS Server (Managed by Certbot SSL)
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name yourdomain.com www.yourdomain.com;
+
+    # SSL Certificate Paths (Certbot will configure these automatically)
+    # ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    # include /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Root directory of the built React Vite Frontend
+    root /var/www/choshmazone/client/dist;
+    index index.html;
+
+    # Gzip Compression for maximum load speed
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml font/truetype font/opentype application/vnd.ms-fontobject image/svg+xml;
+
+    # Maximum file upload size (e.g. for product images and banners)
+    client_max_body_size 25M;
+
+    # 1. API Endpoints Reverse Proxy to Express Server
+    location /api/ {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade ;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host System.Management.Automation.Internal.Host.InternalHost;
+        proxy_cache_bypass ;
+        proxy_set_header X-Real-IP ;
+        proxy_set_header X-Forwarded-For ;
+        proxy_set_header X-Forwarded-Proto ;
+    }
+
+    # 2. Uploaded Product and Banner Media
+    location /uploads/ {
+        alias /var/www/choshmazone/server/uploads/;
+        expires 30d;
+        add_header Cache-Control public, no-transform;
+        access_log off;
+    }
+
+    # 3. Static Assets Caching (Vite hashed bundles)
+    location ~* \.(?:ico|css|js|gif|jpe?g|png|webp|woff2?|eot|ttf|svg)$ {
+        expires 1y;
+        add_header Cache-Control public, immutable;
+        access_log off;
+    }
+
+    # 4. React Single Page Application (SPA) Routing Fallback
+    location / {
+        try_files  / /index.html;
+        add_header Cache-Control no-cache;
+    }
+}
