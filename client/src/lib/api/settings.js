@@ -81,6 +81,26 @@ export const DEFAULT_CHECKOUT_FIELD_SETTINGS = {
 };
 
 export const settingsParams = {
+    getCached: (key) => {
+        if (!settingsCache) return null;
+        if (Array.isArray(settingsCache)) {
+            const cached = settingsCache.find(s => s.key === key);
+            return cached ? cached.value : null;
+        }
+        if (typeof settingsCache === 'object') {
+            return settingsCache[key] ?? null;
+        }
+        return null;
+    },
+
+    fetchAll: async () => {
+        return await settingsParams.getAll();
+    },
+
+    listAssets: async () => {
+        return [];
+    },
+
     getAll: async () => {
         try {
             const data = await api.get('/settings');
