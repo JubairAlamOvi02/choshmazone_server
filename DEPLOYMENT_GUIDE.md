@@ -1,13 +1,16 @@
 # 🚀 Choshmazone Deployment Guide for Hostinger KVM 1 VPS
 
-This complete guide will walk you through setting up and running your **Choshmazone** project (React Frontend + Node.js/Express Backend + PostgreSQL) on a fresh **Hostinger KVM 1** Ubuntu VPS (Ubuntu 22.04 or 24.04 LTS).
+This complete guide will walk you through setting up and running your **Choshmazone** project (React 19 Frontend + Node.js/Express Backend + PostgreSQL Database) on a fresh **Hostinger KVM 1** Ubuntu VPS (Ubuntu 22.04 or 24.04 LTS).
 
 ---
 
 ## 📋 System Requirements
 - **Server:** Hostinger KVM 1 (1 vCPU, 4 GB RAM, 50 GB NVMe Storage)
 - **OS:** Ubuntu 22.04 / 24.04 64-bit
-- **Domain:** Your custom domain (e.g. `choshmazone.com`) pointing to your VPS IP address
+- **Domain:** Your custom domain (e.g. `choshmazone.com`) pointing to your VPS IP address:
+  - `A Record: @ -> YOUR_VPS_IP`
+  - `A Record: www -> YOUR_VPS_IP`
+- **GitHub Repository:** `https://github.com/JubairAlamOvi02/choshmazone_server.git`
 
 ---
 
@@ -23,11 +26,11 @@ sudo apt update && sudo apt upgrade -y
 
 ---
 
-## Step 2: Install Node.js, Git, Nginx, and Build Tools
+## Step 2: Install Node.js 20, Git, Nginx, and Build Tools
 Install Node.js 20.x LTS:
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs git nginx build-essential
+sudo apt install -y nodejs git nginx build-essential certbot python3-certbot-nginx
 ```
 Install PM2 globally to keep the server running continuously:
 ```bash
@@ -35,7 +38,7 @@ sudo npm install -g pm2
 ```
 Verify installations:
 ```bash
-node -v    # v20.x.x
+node -v    # Expected: v20.x.x
 npm -v
 nginx -v
 ```
@@ -65,18 +68,13 @@ ALTER DATABASE choshmazone OWNER TO choshma_user;
 
 ---
 
-## Step 4: Upload / Clone the Project to the Server
-Create the app directory in `/var/www`:
+## Step 4: Clone the Project from GitHub
+Create the app directory in `/var/www` and clone the repository:
 ```bash
-sudo mkdir -p /var/www/choshmazone
-sudo chown -R www-data:www-data /var/www/choshmazone
-sudo chmod -R 755 /var/www/choshmazone
-```
-
-Upload your `choshmazone_server` folder to `/var/www/choshmazone` using Git, SCP, or SFTP (FileZilla):
-```bash
-# Example via SCP from your local machine:
-scp -r d:/AG_Projects/choshmazone_server/* root@YOUR_VPS_IP:/var/www/choshmazone/
+sudo mkdir -p /var/www
+cd /var/www
+git clone https://github.com/JubairAlamOvi02/choshmazone_server.git choshmazone
+cd /var/www/choshmazone
 ```
 
 ---
@@ -93,10 +91,9 @@ scp -r d:/AG_Projects/choshmazone_server/* root@YOUR_VPS_IP:/var/www/choshmazone
    ```
 3. Create your production `.env` file:
    ```bash
-   cp .env.example .env
    nano .env
    ```
-   Configure the values:
+   Paste the following configuration:
    ```env
    PORT=5000
    NODE_ENV=production
@@ -105,16 +102,24 @@ scp -r d:/AG_Projects/choshmazone_server/* root@YOUR_VPS_IP:/var/www/choshmazone
    DB_NAME=choshmazone
    DB_USER=choshma_user
    DB_PASSWORD=ChooseAStrongPassword123!
-   JWT_SECRET=use_a_long_random_secret_string_here
-   BASE_URL=https://yourdomain.com
+   JWT_SECRET=choshmazone_super_secret_jwt_key_change_this_to_random_string
+   JWT_EXPIRES_IN=7d
+   BASE_URL=https://choshmazone.com
+
+   # Telegram Bot Instant Order Alerts (Optional companion notifications)
+   TELEGRAM_BOT_TOKEN=8639759587:AAHgCaAwJfu35H2CYTFRhgpRDNYYwt9s8LQ
+   TELEGRAM_CHAT_ID=2119791189
+
+   # Google Sheets Order Sync Webhook
+   GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/AKfycbxEmGDmu1IRiz9MqKBAnIH_SDfG9GJTIHfbRIipKw5Lb_vC_B9KorTUu6fbpP11ZmNF/exec
    ```
    Save with `Ctrl+O`, Enter, then exit with `Ctrl+X`.
 
-4. Run the database migration script to automatically create all tables and initial admin:
+4. Run database migrations:
    ```bash
    npm run db:migrate
    ```
-   *(This creates tables: users, products, categories, orders, order_items, reviews, site_settings, visitor_sessions, web_events, and default admin)*
+   *(Creates tables: users, products, categories, orders, order_items with variant columns, reviews, site_settings, visitor_sessions, web_events, and creates default Admin: `admin@choshmazone.com` / `admin12345`)*
 
 5. Start the backend with PM2:
    ```bash
@@ -127,34 +132,64 @@ scp -r d:/AG_Projects/choshmazone_server/* root@YOUR_VPS_IP:/var/www/choshmazone
 
 ---
 
-## Step 6: Build the Frontend (Client)
+## Step 6: Configure & Build the React Frontend (Client)
 
 1. Navigate to the client directory:
    ```bash
    cd /var/www/choshmazone/client
    ```
-2. Install dependencies:
+2. Create client production `.env`:
+   ```bash
+   nano .env
+   ```
+   Paste:
+   ```env
+   # Leave VITE_API_URL empty when served behind Nginx reverse proxy on the same domain
+   VITE_API_URL=
+
+   # Real-time Phone Push Notifications via ntfy (Zero-cost iOS & Android lockscreen alerts)
+   VITE_NTFY_TOPIC=choshmazone-orders-secret-topic-change-me
+
+   # Telegram Bot Notifications
+   VITE_TELEGRAM_BOT_TOKEN=8639759587:AAHgCaAwJfu35H2CYTFRhgpRDNYYwt9s8LQ
+   VITE_TELEGRAM_CHAT_ID=2119791189
+
+   # Public Admin Orders URL (used for action buttons in notifications)
+   VITE_ADMIN_BASE_URL=https://choshmazone.com/admin/orders
+   ```
+   Save with `Ctrl+O`, Enter, then exit with `Ctrl+X`.
+
+3. Install frontend dependencies:
    ```bash
    npm install
    ```
-3. Build the production bundle:
+4. Build the optimized production bundle:
    ```bash
    npm run build
    ```
-   This generates the optimized static files in `/var/www/choshmazone/client/dist`.
+   This compiles everything into `/var/www/choshmazone/client/dist`.
+
+5. Set proper web ownership:
+   ```bash
+   sudo chown -R www-data:www-data /var/www/choshmazone
+   sudo chmod -R 755 /var/www/choshmazone
+   ```
 
 ---
 
 ## Step 7: Configure Nginx Web Server
 
-1. Copy the provided Nginx configuration:
+1. Copy the provided Nginx configuration template:
    ```bash
    sudo cp /var/www/choshmazone/nginx.conf.example /etc/nginx/sites-available/choshmazone
    ```
-2. Edit the configuration to replace `yourdomain.com` with your actual domain:
+2. Edit the configuration to replace `yourdomain.com` with your actual domain name:
    ```bash
    sudo nano /etc/nginx/sites-available/choshmazone
    ```
+   > [!NOTE]
+   > The configuration already includes `client_max_body_size 100M;` to support MP4/WebM video uploads for the **ChoshmaZone Spotlight Media Manager** and byte-range streaming for video playback.
+
 3. Enable the site and test configuration:
    ```bash
    sudo ln -s /etc/nginx/sites-available/choshmazone /etc/nginx/sites-enabled/
@@ -167,32 +202,38 @@ scp -r d:/AG_Projects/choshmazone_server/* root@YOUR_VPS_IP:/var/www/choshmazone
 
 ## Step 8: Install Free SSL with Let's Encrypt (Certbot)
 
-Install Certbot for Nginx:
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-```
-
 Obtain and configure the SSL certificate:
 ```bash
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+sudo certbot --nginx -d choshmazone.com -d www.choshmazone.com
 ```
-Follow the interactive prompt (enter your email, agree to terms). Certbot will automatically configure HTTPS and auto-renewal in Nginx!
+Follow the interactive prompt (enter your email, agree to terms). Certbot will automatically configure HTTPS redirect and auto-renewal in Nginx!
 
 ---
 
-## 🔑 Default Administrator Credentials
-After running `npm run db:migrate`, your initial administrator account is:
-- **Email:** `admin@choshmazone.com`
-- **Password:** `admin123456`
+## 📲 Step 9: Setup Free Phone Push Notifications (ntfy.sh)
 
-> **Note:** Log in immediately to your Admin Dashboard at `/admin` and change your password!
+1. Download the free **ntfy** app on your phone:
+   - **Android:** [Google Play Store](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
+   - **iPhone:** [Apple App Store](https://apps.apple.com/app/ntfy/id1625396347)
+2. Open the app, tap **"+" (Add topic)**, and enter the topic name configured in your `client/.env` (`VITE_NTFY_TOPIC`).
+3. Login to your store's admin panel at `https://choshmazone.com/admin/orders`, click **"Test Phone Notification"**, and verify you receive an instant audio alert with caller buttons on your lockscreen!
 
 ---
 
-## 🛠️ Helpful Server Commands
-- **Check Backend Status:** `pm2 status`
-- **View Live Backend Logs:** `pm2 logs choshmazone-backend`
-- **Restart Backend:** `pm2 restart choshmazone-backend`
-- **Restart Nginx:** `sudo systemctl restart nginx`
-- **Test Nginx Config:** `sudo nginx -t`
-- **Database Shell:** `sudo -u postgres psql -d choshmazone`
+## 🔄 Step 10: Deploying Future Updates
+
+Whenever you make changes and push them to GitHub:
+```bash
+ssh root@YOUR_VPS_IP
+cd /var/www/choshmazone
+git pull origin main
+
+# Re-run migrations if database schema changed
+cd server && npm install --production && npm run db:migrate
+pm2 reload choshmazone-backend
+
+# Rebuild frontend client
+cd ../client && npm install && npm run build
+
+echo "Deployment complete!"
+```

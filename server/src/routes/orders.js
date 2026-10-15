@@ -101,13 +101,24 @@ router.post('/', optionalAuth, async (req, res) => {
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         for (const item of items) {
             const productId = item.product_id || (isUUID.test(item.id) ? item.id : null);
-            const style = item.style || 'Default';
+            let style = item.style || 'Default';
+            if (item.variant) {
+                const parts = [];
+                if (item.variant.color) parts.push(item.variant.color);
+                if (item.variant.size) parts.push(item.variant.size);
+                if (parts.length > 0 && (!item.style || item.style === 'Default')) {
+                    style = parts.join(', ');
+                }
+            }
             const unitPrice = item.price || item.unit_price;
+            const selectedColor = item.selected_color || item.variant?.color || item.color || null;
+            const selectedSize = item.selected_size || item.variant?.size || item.size || null;
+            const variantId = item.variant_id || item.variant?.id || null;
 
             await client.query(`
-                INSERT INTO order_items (order_id, product_id, quantity, unit_price, style)
-                VALUES ($1, $2, $3, $4, $5)
-            `, [order.id, productId, item.quantity, unitPrice, style]);
+                INSERT INTO order_items (order_id, product_id, quantity, unit_price, style, selected_color, selected_size, variant_id)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            `, [order.id, productId, item.quantity, unitPrice, style, selectedColor, selectedSize, variantId]);
         }
 
         await client.query('COMMIT');
@@ -189,7 +200,11 @@ router.get('/track', async (req, res) => {
                            'quantity', oi.quantity,
                            'unit_price', oi.unit_price,
                            'style', oi.style,
-                           'product', json_build_object('name', p.name, 'image_url', p.image_url)
+                           'selected_color', oi.selected_color,
+                            'selected_size', oi.selected_size,
+                            'variant_id', oi.variant_id,
+                            'products', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style),
+                            'product', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style)
                        )
                    ) as items
             FROM orders o
@@ -226,7 +241,11 @@ router.get('/my', verifyToken, async (req, res) => {
                            'quantity', oi.quantity,
                            'unit_price', oi.unit_price,
                            'style', oi.style,
-                           'product', json_build_object('name', p.name, 'image_url', p.image_url)
+                           'selected_color', oi.selected_color,
+                            'selected_size', oi.selected_size,
+                            'variant_id', oi.variant_id,
+                            'products', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style),
+                            'product', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style)
                        )
                    ) as items
             FROM orders o
@@ -255,7 +274,11 @@ router.get('/', verifyToken, requireAdmin, async (req, res) => {
                            'quantity', oi.quantity,
                            'unit_price', oi.unit_price,
                            'style', oi.style,
-                           'product', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants)
+                           'selected_color', oi.selected_color,
+                            'selected_size', oi.selected_size,
+                            'variant_id', oi.variant_id,
+                            'products', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style),
+                            'product', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style)
                        )
                    ) as order_items
             FROM orders o
@@ -285,7 +308,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
                            'quantity', oi.quantity,
                            'unit_price', oi.unit_price,
                            'style', oi.style,
-                           'product', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants)
+                           'selected_color', oi.selected_color,
+                            'selected_size', oi.selected_size,
+                            'variant_id', oi.variant_id,
+                            'products', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style),
+                            'product', json_build_object('name', p.name, 'image_url', p.image_url, 'variants', p.variants, 'color', p.color, 'style', p.style)
                        )
                    ) as order_items
             FROM orders o

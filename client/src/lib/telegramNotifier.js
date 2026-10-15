@@ -109,6 +109,19 @@ export const sendTelegramOrderNotification = async (orderData) => {
         const text = formatOrderMessage(orderData);
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
+        const cleanPhone = String(orderData.phone || '').replace(/\D/g, '');
+        const adminUrl = 'https://choshmazone.com/admin/orders';
+        const inlineKeyboard = [
+            [
+                { text: '👁️ View in Admin', url: adminUrl }
+            ]
+        ];
+
+        if (cleanPhone) {
+            const waNumber = cleanPhone.startsWith('880') ? cleanPhone : (cleanPhone.startsWith('0') ? `88${cleanPhone}` : `880${cleanPhone}`);
+            inlineKeyboard[0].push({ text: '💬 WhatsApp Customer', url: `https://wa.me/${waNumber}` });
+        }
+
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -118,7 +131,11 @@ export const sendTelegramOrderNotification = async (orderData) => {
                 chat_id: TELEGRAM_CHAT_ID,
                 text: text,
                 parse_mode: 'HTML',
-                disable_web_page_preview: true
+                disable_web_page_preview: true,
+                disable_notification: false,
+                reply_markup: {
+                    inline_keyboard: inlineKeyboard
+                }
             })
         });
 
@@ -165,7 +182,8 @@ Your order notification system is now working. You will receive real-time push a
             body: JSON.stringify({
                 chat_id: TELEGRAM_CHAT_ID,
                 text: testText,
-                parse_mode: 'HTML'
+                parse_mode: 'HTML',
+                disable_notification: false
             })
         });
 

@@ -26,4 +26,17 @@ router.post('/multiple', verifyToken, requireAdmin, upload.array('files', 10), (
     res.json({ urls });
 });
 
+// Upload customer prescription slip (Public / Checkout)
+router.post('/prescription', upload.single('file'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No prescription file uploaded.' });
+    }
+    const relativeUrl = `/uploads/${req.file.filename}`;
+    res.json({
+        url: relativeUrl,
+        filename: req.file.filename,
+        size: req.file.size
+    });
+});
+
 export default router;

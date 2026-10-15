@@ -235,13 +235,25 @@ const ProductDetails = () => {
         
         let variantId = 'base';
         let variantTitleSuffix = '';
+        const color = selectedColor || product?.color || '';
+        const size = selectedSize || (product?.variants?.[0]?.size) || 'Standard';
+
         if (currentVariant) {
             item.variant = currentVariant;
+            item.variant_id = currentVariant.id;
+            item.selected_color = currentVariant.color || color;
+            item.selected_size = currentVariant.size || size;
             variantId = currentVariant.id;
             variantTitleSuffix = `${selectedColor ? ` - ${selectedColor}` : ''}${selectedSize ? ` - ${selectedSize}` : ''}`;
             if (currentVariant.image_url) {
                 item.image = currentVariant.image_url;
             }
+        } else {
+            item.variant_id = null;
+            item.selected_color = color;
+            item.selected_size = size;
+            item.variant = { color, size };
+            variantTitleSuffix = `${color ? ` - ${color}` : ''}${size && size !== 'Standard' ? ` - ${size}` : ''}`;
         }
 
         item.title = `${product.title}${variantTitleSuffix}`;
@@ -332,15 +344,15 @@ const ProductDetails = () => {
                         <ChevronRight size={12} strokeWidth={3} className="text-border" />
                         <Link to="/shop" className="hover:text-primary transition-colors">Shop</Link>
                         <ChevronRight size={12} strokeWidth={3} className="text-border" />
-                        <span className="text-primary truncate max-w-[150px] md:max-w-none">{product.title}</span>
+                        <span className="text-primary truncate max-w-[200px] sm:max-w-xs md:max-w-none">{product.title}</span>
                     </nav>
                 </div>
             </div>
 
-            <main className="container mx-auto px-4 py-6 md:py-10 pb-24 lg:pb-16 max-w-7xl">
+            <main className="container mx-auto px-4 py-6 md:py-10 pb-32 lg:pb-16 max-w-7xl">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 xl:gap-16 items-start">
                     {/* Left: Image Gallery */}
-                    <div className="flex flex-col gap-4 relative lg:sticky top-[72px] lg:top-24 h-fit z-10 bg-white lg:bg-transparent pb-2 lg:pb-0">
+                    <div className="flex flex-col gap-4 lg:sticky lg:top-24 h-fit">
                         <div className="relative group bg-background-alt rounded-2xl overflow-hidden aspect-square w-full flex items-center justify-center border border-border/50 shadow-sm transition-all duration-500 hover:shadow-xl mx-auto">
                             <OptimizedImage
                                 src={mainImage}
@@ -419,7 +431,7 @@ const ProductDetails = () => {
                                 )}
                             </div>
 
-                            <h1 className="text-2xl md:text-3xl xl:text-4xl font-bold text-text-main mb-3 font-outfit leading-[1.1] tracking-tight break-words">
+                            <h1 className="text-2xl md:text-3xl xl:text-4xl font-bold text-text-main mb-3 font-outfit leading-snug md:leading-tight tracking-tight break-words">
                                 {product.title}
                             </h1>
 
@@ -627,21 +639,24 @@ const ProductDetails = () => {
             <ReviewSection productId={product.id} />
 
             {/* Mobile Sticky Bottom Bar */}
-            <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-lg border-t border-border p-2.5 z-40 md:hidden flex items-center gap-2.5 animate-in slide-in-from-bottom duration-500 shadow-xl">
-                <div className="flex flex-col shrink-0 min-w-[70px]">
-                    <span className="text-[8px] uppercase font-bold tracking-widest text-text-muted">Total</span>
-                    <span className="text-sm font-bold text-primary font-outfit">৳{effectiveUnitPrice.toLocaleString()}</span>
+            <div 
+                className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xl border-t border-border/80 px-4 pt-3 pb-6 z-40 md:hidden flex items-center gap-3 animate-in slide-in-from-bottom duration-500 shadow-[0_-8px_24px_rgba(0,0,0,0.08)]"
+                style={{ paddingBottom: 'max(1.5rem, calc(0.75rem + env(safe-area-inset-bottom, 0px)))' }}
+            >
+                <div className="flex flex-col shrink-0 min-w-[76px]">
+                    <span className="text-[9px] uppercase font-bold tracking-widest text-text-muted">Total</span>
+                    <span className="text-base font-extrabold text-primary font-outfit leading-tight">৳{effectiveUnitPrice.toLocaleString()}</span>
                 </div>
                 <button
-                    className={`flex-1 h-10 font-bold text-[10px] uppercase tracking-wider rounded-lg flex items-center justify-center gap-1.5 shadow-xs ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white' : 'bg-primary text-white active:scale-95 transition-transform'}`}
+                    className={`flex-1 h-11 font-bold text-[11px] uppercase tracking-wider rounded-xl flex items-center justify-center gap-1.5 shadow-xs cursor-pointer ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-400 text-white' : 'bg-primary text-white active:scale-95 transition-transform'}`}
                     onClick={() => addToCart(getCartItem())}
                     disabled={isOutOfStock}
                 >
-                    <ShoppingBag size={14} />
+                    <ShoppingBag size={15} />
                     <span>{isOutOfStock ? 'Out of Stock' : 'Add to Bag'}</span>
                 </button>
                 <button
-                    className={`flex-1 h-10 font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500 hidden' : 'bg-secondary text-primary active:scale-95 transition-transform'}`}
+                    className={`flex-1 h-11 font-bold text-[11px] uppercase tracking-wider rounded-xl shadow-xs cursor-pointer ${isOutOfStock ? 'opacity-50 cursor-not-allowed bg-gray-300 text-gray-500 hidden' : 'bg-secondary text-primary active:scale-95 transition-transform'}`}
                     onClick={handleBuyNow}
                     disabled={isOutOfStock}
                 >

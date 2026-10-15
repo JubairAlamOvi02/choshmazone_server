@@ -101,6 +101,7 @@ cd /var/www/choshmazone
    DB_USER=choshma_user
    DB_PASSWORD=ChooseAStrongPassword123!
    JWT_SECRET=use_a_long_random_secret_string_here_12345
+   JWT_EXPIRES_IN=7d
    BASE_URL=https://choshmazone.com
 
    # Telegram notifications for new orders
@@ -117,7 +118,7 @@ cd /var/www/choshmazone
    npm run db:migrate
    ```
    *Expected output: `Database schema migrated successfully!`*
-   *(Default Admin created: `admin@choshmazone.com` / `admin12345`)*
+   *(Creates tables: users, products, categories, orders, order_items with variant columns, reviews, site_settings, visitor_sessions, web_events, and creates default Admin: `admin@choshmazone.com` / `admin12345`)*
 
 4. **Start backend with PM2:**
    ```bash
@@ -132,15 +133,36 @@ cd /var/www/choshmazone
 
 ## ⚡ Step 6: Build the React Frontend
 
-1. **Install frontend packages & build:**
+1. **Create frontend `.env`:**
    ```bash
    cd /var/www/choshmazone/client
+   nano .env
+   ```
+   Paste:
+   ```env
+   # Leave empty when served via Nginx reverse proxy
+   VITE_API_URL=
+
+   # Real-time Phone Push Notifications via ntfy (Zero-cost iOS & Android lockscreen alerts)
+   VITE_NTFY_TOPIC=choshmazone-orders-secret-topic-change-me
+
+   # Telegram Bot Notifications
+   VITE_TELEGRAM_BOT_TOKEN=8639759587:AAHgCaAwJfu35H2CYTFRhgpRDNYYwt9s8LQ
+   VITE_TELEGRAM_CHAT_ID=2119791189
+
+   # Public Admin Orders URL
+   VITE_ADMIN_BASE_URL=https://choshmazone.com/admin/orders
+   ```
+   Save and exit.
+
+2. **Install frontend packages & build:**
+   ```bash
    npm install
    npm run build
    ```
    *The production files will be built inside `/var/www/choshmazone/client/dist`.*
 
-2. **Ensure permissions:**
+3. **Ensure permissions:**
    ```bash
    sudo chown -R www-data:www-data /var/www/choshmazone
    sudo chmod -R 755 /var/www/choshmazone
@@ -155,7 +177,8 @@ cd /var/www/choshmazone
    sudo cp /var/www/choshmazone/nginx.conf.example /etc/nginx/sites-available/choshmazone
    sudo nano /etc/nginx/sites-available/choshmazone
    ```
-   Replace `choshmazone.com` with your actual domain name.
+   Replace `yourdomain.com` with your actual domain name.
+   *(Note: Configuration includes `client_max_body_size 100M;` and byte-range streaming for Spotlight MP4/WebM videos and lifestyle photos).*
 
 2. **Enable the site:**
    ```bash
@@ -169,11 +192,21 @@ cd /var/www/choshmazone
    ```bash
    sudo certbot --nginx -d choshmazone.com -d www.choshmazone.com
    ```
-   Follow the prompts. Certbot will configure SSL automatically.
+   Follow the prompts. Certbot will configure SSL automatically with auto-renewal.
 
 ---
 
-## 🔄 Step 8: How to Deploy Future Updates
+## 📲 Step 8: Setup Free Phone Push Notifications (ntfy.sh)
+
+1. Install the free **ntfy** app on your phone:
+   - **Android:** [Google Play Store](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
+   - **iPhone:** [Apple App Store](https://apps.apple.com/app/ntfy/id1625396347)
+2. Tap **"+" (Add topic)**, and subscribe to your secret topic (`VITE_NTFY_TOPIC`).
+3. In your store's admin panel at `https://choshmazone.com/admin/orders`, click **"Test Phone Notification"** to test your lockscreen sound and call actions!
+
+---
+
+## 🔄 Step 9: How to Deploy Future Updates
 
 Whenever you make changes and push them from your local computer:
 ```bash
@@ -181,9 +214,10 @@ ssh root@YOUR_VPS_IP
 cd /var/www/choshmazone
 git pull origin main
 
-# Rebuild frontend
-cd client && npm install && npm run build
-
-# Restart backend
+# Re-run migrations and reload backend
+cd server && npm install --production && npm run db:migrate
 pm2 reload choshmazone-backend
+
+# Rebuild frontend
+cd ../client && npm install && npm run build
 ```

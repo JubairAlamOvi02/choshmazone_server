@@ -1,4 +1,4 @@
-﻿-- ==============================================================================
+-- ==============================================================================
 -- Choshmazone Custom PostgreSQL Schema
 -- Native Database Structure for Hostinger KVM 1 VPS
 -- ==============================================================================
@@ -79,8 +79,15 @@ CREATE TABLE IF NOT EXISTS order_items (
     quantity INTEGER NOT NULL DEFAULT 1,
     unit_price NUMERIC(10,2) NOT NULL,
     style TEXT DEFAULT 'Default',
+    selected_color TEXT,
+    selected_size TEXT,
+    variant_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS selected_color TEXT;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS selected_size TEXT;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id TEXT;
 
 -- 6. REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS reviews (
