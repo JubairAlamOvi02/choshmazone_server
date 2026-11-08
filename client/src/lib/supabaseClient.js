@@ -12,17 +12,26 @@ const createChannelObj = () => {
     return ch;
 };
 
-export const supabase = {
-    from: () => ({
-        select: () => Promise.resolve({ data: [], error: null }),
+const createQueryBuilder = () => {
+    const builder = {
+        select: () => builder,
         insert: () => Promise.resolve({ data: null, error: null }),
-        update: () => Promise.resolve({ data: null, error: null }),
-        delete: () => Promise.resolve({ data: null, error: null }),
-        eq: () => ({
-            single: () => Promise.resolve({ data: null, error: null }),
-            maybeSingle: () => Promise.resolve({ data: null, error: null })
-        })
-    }),
+        update: () => builder,
+        delete: () => builder,
+        eq: () => builder,
+        in: () => builder,
+        order: () => builder,
+        limit: () => builder,
+        range: () => builder,
+        single: () => Promise.resolve({ data: null, error: null }),
+        maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        then: (resolve) => resolve({ data: [], error: null })
+    };
+    return builder;
+};
+
+export const supabase = {
+    from: () => createQueryBuilder(),
     storage: {
         from: () => ({
             upload: async (pathOrFile, maybeFile) => {

@@ -39,6 +39,11 @@
   - `WishlistContext`: Handles user wishlist syncing with the backend API.
   - `RecentlyViewedContext`: Tracks customer viewing history locally for high-converting social proof.
   - `ToastContext`: System-wide toast notification alerts.
+- **Product Showcase & Visual Merchandising (`Showcase/`, `ShowcaseManager.jsx`)**:
+  - Storefront dynamic collection grids with 1:1 photography, pill sale badges, dual pricing, and quick actions.
+  - Full admin management suite for creating, editing, reordering, and publishing curated collections.
+- **Meta Pixel Engine (`src/lib/metaPixel.js`)**:
+  - Persistent `visitor_id` anchored external ID matching, E.164 phone normalization, and CAPI deduplication `eventID`.
 - **API Client Layer (`client/src/lib/apiClient.js`)**:
   - Replaces Supabase SDK with pure `fetch` calls.
   - Automatically attaches `Authorization: Bearer <token>` when authenticated.
@@ -78,7 +83,7 @@ PostgreSQL relational database featuring full referential integrity:
 | `products` | Eyewear catalog | `id`, `name`, `price`, `stock_quantity`, `images` (JSONB), `variants` (JSONB) |
 | `categories` | Product collections | `id`, `name`, `slug`, `image_url`, `is_active` |
 | `orders` | Customer purchases | `id` (UUID), `user_id`, `total_amount`, `shipping_address` (JSONB), `status` |
-| `order_items` | Products in order | `id`, `order_id`, `product_id`, `quantity`, `unit_price`, `style` |
+| `order_items` | Products in order | `id`, `order_id`, `product_id`, `quantity`, `unit_price`, `style`, `selected_color`, `selected_size`, `variant_id`, `variant_info` (JSONB) |
 | `reviews` | Customer feedback | `id`, `product_id`, `user_id`, `rating`, `comment` |
 | `site_settings` | Dynamic CMS configs | `key` (VARCHAR PK), `value` (TEXT), `updated_at` |
 | `visitor_sessions`| Web analytics | `id`, `visitor_id`, `user_id`, `device_type`, `has_purchased` |

@@ -4,13 +4,19 @@ This complete guide will walk you through setting up and running your **Choshmaz
 
 ---
 
-## 📋 System Requirements
+## 📋 System Requirements & Pre-Flight Checklist
 - **Server:** Hostinger KVM 1 (1 vCPU, 4 GB RAM, 50 GB NVMe Storage)
 - **OS:** Ubuntu 22.04 / 24.04 64-bit
 - **Domain:** Your custom domain (e.g. `choshmazone.com`) pointing to your VPS IP address:
   - `A Record: @ -> YOUR_VPS_IP`
   - `A Record: www -> YOUR_VPS_IP`
 - **GitHub Repository:** `https://github.com/JubairAlamOvi02/choshmazone_server.git`
+
+> [!TIP]
+> **Beginner Tip for Nano Text Editor:**
+> - To paste: Right-click inside your PowerShell terminal.
+> - To save: Press `Ctrl + O`, then hit `Enter`.
+> - To exit: Press `Ctrl + X`.
 
 ---
 
@@ -19,6 +25,8 @@ Open Terminal / PowerShell on your computer and connect to your server:
 ```bash
 ssh root@YOUR_VPS_IP
 ```
+*(When prompted for password, type your Hostinger root password and press Enter. Characters will not appear on screen for security).*
+
 Update all system packages:
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -102,11 +110,11 @@ cd /var/www/choshmazone
    DB_NAME=choshmazone
    DB_USER=choshma_user
    DB_PASSWORD=ChooseAStrongPassword123!
-   JWT_SECRET=choshmazone_super_secret_jwt_key_change_this_to_random_string
+   JWT_SECRET=choshmazone_super_secret_jwt_key_987654321
    JWT_EXPIRES_IN=7d
    BASE_URL=https://choshmazone.com
 
-   # Telegram Bot Instant Order Alerts (Optional companion notifications)
+   # Telegram Bot Instant Order Alerts
    TELEGRAM_BOT_TOKEN=8639759587:AAHgCaAwJfu35H2CYTFRhgpRDNYYwt9s8LQ
    TELEGRAM_CHAT_ID=2119791189
 
@@ -119,7 +127,7 @@ cd /var/www/choshmazone
    ```bash
    npm run db:migrate
    ```
-   *(Creates tables: users, products, categories, orders, order_items with variant columns, reviews, site_settings, visitor_sessions, web_events, and creates default Admin: `admin@choshmazone.com` / `admin12345`)*
+   *(Creates tables: users, products, categories, orders, order_items with variant_info, reviews, site_settings, visitor_sessions, web_events, and creates default Admin: `admin@choshmazone.com` / `admin123456`)*
 
 5. Start the backend with PM2:
    ```bash
@@ -210,6 +218,15 @@ Follow the interactive prompt (enter your email, agree to terms). Certbot will a
 
 ---
 
+## 🔑 Admin Portal Credentials & URL
+
+Once deployed, visit your admin panel:
+* **Admin Login URL:** `https://yourdomain.com/admin/login`
+* **Email:** `admin@choshmazone.com`
+* **Password:** `admin123456`
+
+---
+
 ## 📲 Step 9: Setup Free Phone Push Notifications (ntfy.sh)
 
 1. Download the free **ntfy** app on your phone:
@@ -237,3 +254,17 @@ cd ../client && npm install && npm run build
 
 echo "Deployment complete!"
 ```
+
+---
+
+## 🛠️ Helpful Troubleshooting Commands
+
+| Task | Command |
+| :--- | :--- |
+| **Check Backend Status** | `pm2 status` |
+| **View Live Backend Logs** | `pm2 logs choshmazone-backend` |
+| **Restart Backend** | `pm2 restart choshmazone-backend` |
+| **Test Nginx Syntax** | `sudo nginx -t` |
+| **View Nginx Error Logs** | `sudo tail -n 50 /var/log/nginx/error.log` |
+| **Check PostgreSQL Status** | `sudo systemctl status postgresql` |
+| **Check Open Firewall Ports** | `sudo ufw status` (enable: `sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw allow 22 && sudo ufw enable`) |

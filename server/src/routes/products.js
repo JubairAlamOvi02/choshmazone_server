@@ -16,6 +16,17 @@ router.get('/', async (req, res) => {
             whereClauses.push('is_active = TRUE');
         }
 
+        if (req.query.ids) {
+            const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const validIds = String(req.query.ids).split(',').map(s => s.trim()).filter(s => isUUID.test(s));
+            if (validIds.length > 0) {
+                whereClauses.push('id = ANY($' + counter++ + '::uuid[])');
+                params.push(validIds);
+            } else {
+                whereClauses.push('1 = 0');
+            }
+        }
+
         if (category) {
             whereClauses.push('category = $' + counter++);
             params.push(category);

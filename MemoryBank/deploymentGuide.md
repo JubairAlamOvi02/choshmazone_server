@@ -1,43 +1,60 @@
-# 🚀 ChoshmaZone — Complete Deployment Guide (VPS)
+# 🚀 ChoshmaZone — Complete Deployment Guide (Hostinger KVM 1 VPS)
 
-This guide walks you step-by-step through deploying the application on a **Hostinger KVM 1 VPS** (Ubuntu 22.04 or 24.04 LTS).
+This guide walks you step-by-step through deploying your fullstack **ChoshmaZone** store (React 19 Frontend + Express/Node.js Backend + PostgreSQL Relational Database + Nginx Reverse Proxy + PM2) on a fresh **Hostinger KVM 1 Ubuntu VPS** (Ubuntu 22.04 or 24.04 LTS).
 
 ---
 
 ## 📋 Pre-Flight Checklist
-- [ ] Hostinger KVM 1 VPS IP address (`YOUR_VPS_IP`).
-- [ ] Root password or SSH Key.
-- [ ] Domain name (e.g. `choshmazone.com`) with DNS **A records** pointing to `YOUR_VPS_IP`:
-  - `A @ -> YOUR_VPS_IP`
-  - `A www -> YOUR_VPS_IP`
-- [ ] GitHub repository: `https://github.com/JubairAlamOvi02/choshmazone_server.git`
+
+Before you begin, gather the following from your Hostinger and Domain accounts:
+- [ ] **Hostinger VPS IP Address** (`YOUR_VPS_IP` — e.g. `194.164.55.123`) from **Hostinger hPanel $\rightarrow$ VPS $\rightarrow$ SSH Access**.
+- [ ] **Hostinger VPS Root Password** (reset it in hPanel if you don't remember it).
+- [ ] **Domain Name** (e.g. `choshmazone.com`) pointing to your VPS IP:
+  - `A Record: @ -> YOUR_VPS_IP`
+  - `A Record: www -> YOUR_VPS_IP`
+- [ ] **GitHub Repository**: `https://github.com/JubairAlamOvi02/choshmazone_server.git`
+
+> [!TIP]
+> **Beginner Tip for Nano Editor:**
+> Whenever you edit files with `nano`:
+> - To paste: Right-click inside your PowerShell terminal.
+> - To save: Press `Ctrl + O`, then hit `Enter`.
+> - To exit: Press `Ctrl + X`.
 
 ---
 
-## ⚡ Step 1: Connect to Your VPS
-Open PowerShell or your terminal on your PC:
-```bash
-ssh root@YOUR_VPS_IP
-```
+## ⚡ Step 1: Connect to Your VPS via SSH
 
-Update system packages:
-```bash
-sudo apt update && sudo apt upgrade -y
-```
+1. Open **PowerShell** or **Terminal** on your computer.
+2. Connect to your VPS server:
+   ```bash
+   ssh root@YOUR_VPS_IP
+   ```
+   *(Replace `YOUR_VPS_IP` with your actual server IP, e.g., `ssh root@194.164.55.123`)*
+
+3. If asked `Are you sure you want to continue connecting (yes/no)?`, type `yes` and press `Enter`.
+4. Enter your root password.
+   *(Note: No characters or asterisks will appear while typing passwords in Linux. Just type or right-click to paste and hit `Enter`).*
+
+5. Once logged in (`root@...:~#`), update the system packages:
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   ```
 
 ---
 
 ## ⚡ Step 2: Install Node.js 20, Git, Nginx, & PM2
-Run the following commands:
+
+Install the required server software and build tools:
 ```bash
-# 1. Install Node.js 20.x LTS
+# 1. Install Node.js 20.x LTS, Git, Nginx, and Certbot
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt install -y nodejs git nginx build-essential certbot python3-certbot-nginx
 
 # 2. Install PM2 process manager globally
 sudo npm install -g pm2
 
-# 3. Verify installed versions
+# 3. Verify installations
 node -v    # Expected: v20.x.x
 npm -v
 nginx -v
@@ -45,31 +62,35 @@ nginx -v
 
 ---
 
-## ⚡ Step 3: Install & Configure PostgreSQL
-Install PostgreSQL:
-```bash
-sudo apt install -y postgresql postgresql-contrib
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
+## ⚡ Step 3: Install & Configure PostgreSQL Database
 
-Create the production database and user:
-```bash
-sudo -u postgres psql
-```
-Inside the `psql` shell, execute:
-```sql
-CREATE DATABASE choshmazone;
-CREATE USER choshma_user WITH ENCRYPTED PASSWORD 'ChooseAStrongPassword123!';
-GRANT ALL PRIVILEGES ON DATABASE choshmazone TO choshma_user;
-ALTER DATABASE choshmazone OWNER TO choshma_user;
-\q
-```
+1. Install and start PostgreSQL:
+   ```bash
+   sudo apt install -y postgresql postgresql-contrib
+   sudo systemctl start postgresql
+   sudo systemctl enable postgresql
+   ```
+
+2. Open the PostgreSQL command line:
+   ```bash
+   sudo -u postgres psql
+   ```
+
+3. Paste the following SQL commands to create the database and user:
+   ```sql
+   CREATE DATABASE choshmazone;
+   CREATE USER choshma_user WITH ENCRYPTED PASSWORD 'ChooseAStrongPassword123!';
+   GRANT ALL PRIVILEGES ON DATABASE choshmazone TO choshma_user;
+   ALTER DATABASE choshmazone OWNER TO choshma_user;
+   \q
+   ```
+   *(If you change `ChooseAStrongPassword123!` to another password, remember to use that exact password in Step 5).*
 
 ---
 
 ## ⚡ Step 4: Clone the Project from GitHub
-Create the web root and clone your repository:
+
+Create the web root directory and clone the repository:
 ```bash
 sudo mkdir -p /var/www
 cd /var/www
@@ -87,7 +108,7 @@ cd /var/www/choshmazone
    npm install --production
    ```
 
-2. **Create the production environment file (`.env`):**
+2. **Create the server environment file (`.env`):**
    ```bash
    nano .env
    ```
@@ -100,25 +121,25 @@ cd /var/www/choshmazone
    DB_NAME=choshmazone
    DB_USER=choshma_user
    DB_PASSWORD=ChooseAStrongPassword123!
-   JWT_SECRET=use_a_long_random_secret_string_here_12345
+   JWT_SECRET=choshmazone_super_secret_jwt_key_987654321
    JWT_EXPIRES_IN=7d
    BASE_URL=https://choshmazone.com
 
-   # Telegram notifications for new orders
+   # Telegram Bot Instant Order Alerts
    TELEGRAM_BOT_TOKEN=8639759587:AAHgCaAwJfu35H2CYTFRhgpRDNYYwt9s8LQ
    TELEGRAM_CHAT_ID=2119791189
 
-   # Google Sheets Webhook
+   # Google Sheets Sync Webhook
    GOOGLE_SCRIPT_URL=https://script.google.com/macros/s/AKfycbxEmGDmu1IRiz9MqKBAnIH_SDfG9GJTIHfbRIipKw5Lb_vC_B9KorTUu6fbpP11ZmNF/exec
    ```
-   Press `Ctrl+O`, `Enter` to save, then `Ctrl+X` to exit.
+   Save and exit: `Ctrl + O` $\rightarrow$ `Enter` $\rightarrow$ `Ctrl + X`.
 
-3. **Run database migration:**
+3. **Run database migrations:**
    ```bash
    npm run db:migrate
    ```
    *Expected output: `Database schema migrated successfully!`*
-   *(Creates tables: users, products, categories, orders, order_items with variant columns, reviews, site_settings, visitor_sessions, web_events, and creates default Admin: `admin@choshmazone.com` / `admin12345`)*
+   *(Creates all tables including `order_items` with `variant_info`, `site_settings`, `visitor_sessions`, and default Admin: `admin@choshmazone.com` / `admin123456`).*
 
 4. **Start backend with PM2:**
    ```bash
@@ -127,20 +148,30 @@ cd /var/www/choshmazone
    pm2 save
    pm2 startup
    ```
-   *(Run the copy-paste command generated by `pm2 startup` to auto-restart on reboots).*
+   *(Run the copy-paste command generated by `pm2 startup` in your terminal to ensure auto-restart on reboots).*
+
+5. **Verify the backend is running:**
+   ```bash
+   pm2 status
+   ```
+   *`choshmazone-backend` should show status: `online`.*
 
 ---
 
-## ⚡ Step 6: Build the React Frontend
+## ⚡ Step 6: Configure & Build the React Frontend
 
-1. **Create frontend `.env`:**
+1. **Navigate to the client directory:**
    ```bash
    cd /var/www/choshmazone/client
+   ```
+
+2. **Create client `.env`:**
+   ```bash
    nano .env
    ```
    Paste:
    ```env
-   # Leave empty when served via Nginx reverse proxy
+   # Leave empty when served behind Nginx reverse proxy on the same domain
    VITE_API_URL=
 
    # Real-time Phone Push Notifications via ntfy (Zero-cost iOS & Android lockscreen alerts)
@@ -153,16 +184,16 @@ cd /var/www/choshmazone
    # Public Admin Orders URL
    VITE_ADMIN_BASE_URL=https://choshmazone.com/admin/orders
    ```
-   Save and exit.
+   Save and exit: `Ctrl + O` $\rightarrow$ `Enter` $\rightarrow$ `Ctrl + X`.
 
-2. **Install frontend packages & build:**
+3. **Install frontend packages & build:**
    ```bash
    npm install
    npm run build
    ```
-   *The production files will be built inside `/var/www/choshmazone/client/dist`.*
+   *This compiles the production assets into `/var/www/choshmazone/client/dist`.*
 
-3. **Ensure permissions:**
+4. **Set web server file permissions:**
    ```bash
    sudo chown -R www-data:www-data /var/www/choshmazone
    sudo chmod -R 755 /var/www/choshmazone
@@ -170,29 +201,47 @@ cd /var/www/choshmazone
 
 ---
 
-## ⚡ Step 7: Configure Nginx & Free SSL
+## ⚡ Step 7: Configure Nginx & Free SSL (HTTPS)
 
 1. **Copy Nginx configuration:**
    ```bash
    sudo cp /var/www/choshmazone/nginx.conf.example /etc/nginx/sites-available/choshmazone
    sudo nano /etc/nginx/sites-available/choshmazone
    ```
-   Replace `yourdomain.com` with your actual domain name.
-   *(Note: Configuration includes `client_max_body_size 100M;` and byte-range streaming for Spotlight MP4/WebM videos and lifestyle photos).*
+   Find `yourdomain.com` inside this file and replace it with your actual domain (e.g. `choshmazone.com` and `www.choshmazone.com`).
+   Save and exit: `Ctrl + O` $\rightarrow$ `Enter` $\rightarrow$ `Ctrl + X`.
 
-2. **Enable the site:**
+   *(Note: The configuration includes `client_max_body_size 100M;` and byte-range streaming for Spotlight MP4/WebM videos and high-resolution photography).*
+
+2. **Enable the site and test configuration:**
    ```bash
    sudo ln -s /etc/nginx/sites-available/choshmazone /etc/nginx/sites-enabled/
    sudo rm -f /etc/nginx/sites-enabled/default
    sudo nginx -t
    sudo systemctl restart nginx
    ```
+   *Expected output from `nginx -t`: `syntax is ok / test is successful`.*
 
 3. **Obtain Free SSL with Certbot:**
    ```bash
    sudo certbot --nginx -d choshmazone.com -d www.choshmazone.com
    ```
-   Follow the prompts. Certbot will configure SSL automatically with auto-renewal.
+   Follow the prompts (enter your email, agree with `Y`). Certbot will automatically install the certificate and redirect HTTP to secure HTTPS.
+
+---
+
+## 🔑 Admin Credentials & Access
+
+Once deployed, open your browser:
+* **Storefront:** `https://yourdomain.com`
+* **Admin Portal:** `https://yourdomain.com/admin/login`
+  * **Email:** `admin@choshmazone.com`
+  * **Password:** `admin123456`
+* **Features to Test in Admin:**
+  * **Product Showcases:** `/admin/showcases` (curate collections, reorder grids, change columns)
+  * **Brand Spotlight:** `/admin/spotlight` (upload brand MP4 videos or photos)
+  * **Order Dashboard:** `/admin/orders` (live tracking, courier copy, customer detail modals)
+  * **Catalog Feed:** `https://yourdomain.com/api/catalog.xml` (Meta & Google Merchant Center XML feed)
 
 ---
 
@@ -201,23 +250,39 @@ cd /var/www/choshmazone
 1. Install the free **ntfy** app on your phone:
    - **Android:** [Google Play Store](https://play.google.com/store/apps/details?id=io.heckel.ntfy)
    - **iPhone:** [Apple App Store](https://apps.apple.com/app/ntfy/id1625396347)
-2. Tap **"+" (Add topic)**, and subscribe to your secret topic (`VITE_NTFY_TOPIC`).
-3. In your store's admin panel at `https://choshmazone.com/admin/orders`, click **"Test Phone Notification"** to test your lockscreen sound and call actions!
+2. Tap **"+" (Add topic)**, and subscribe to your secret topic (matching `VITE_NTFY_TOPIC`).
+3. In your store's admin panel at `https://yourdomain.com/admin/orders`, click **"Test Phone Notification"** to test your lockscreen sound and call actions!
 
 ---
 
 ## 🔄 Step 9: How to Deploy Future Updates
 
-Whenever you make changes and push them from your local computer:
+Whenever you make changes and push them to GitHub from your local PC:
 ```bash
 ssh root@YOUR_VPS_IP
 cd /var/www/choshmazone
 git pull origin main
 
-# Re-run migrations and reload backend
+# Update backend & apply schema migrations
 cd server && npm install --production && npm run db:migrate
 pm2 reload choshmazone-backend
 
-# Rebuild frontend
+# Rebuild frontend client
 cd ../client && npm install && npm run build
+
+echo "Deployment complete!"
 ```
+
+---
+
+## 🛠️ Helpful Troubleshooting Commands
+
+| Task | Command |
+| :--- | :--- |
+| **Check Backend Status** | `pm2 status` |
+| **View Live Backend Logs** | `pm2 logs choshmazone-backend` |
+| **Restart Backend** | `pm2 restart choshmazone-backend` |
+| **Test Nginx Syntax** | `sudo nginx -t` |
+| **View Nginx Error Logs** | `sudo tail -n 50 /var/log/nginx/error.log` |
+| **Check PostgreSQL Status** | `sudo systemctl status postgresql` |
+| **Check Open Firewall Ports** | `sudo ufw status` (enable: `sudo ufw allow 80 && sudo ufw allow 443 && sudo ufw allow 22 && sudo ufw enable`) |

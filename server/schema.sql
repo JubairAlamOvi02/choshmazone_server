@@ -82,12 +82,14 @@ CREATE TABLE IF NOT EXISTS order_items (
     selected_color TEXT,
     selected_size TEXT,
     variant_id TEXT,
+    variant_info JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS selected_color TEXT;
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS selected_size TEXT;
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id TEXT;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_info JSONB DEFAULT '{}'::jsonb;
 
 -- 6. REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS reviews (
@@ -176,7 +178,7 @@ INSERT INTO users (id, email, password_hash, full_name, role)
 VALUES (
     '00000000-0000-0000-0000-000000000001',
     'admin@choshmazone.com',
-    '/2gQ4F7u5W.89vG5e5qE4Y/kL0W8Ff2',
+    '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
     'Admin User',
     'admin'
 ) ON CONFLICT (email) DO NOTHING;

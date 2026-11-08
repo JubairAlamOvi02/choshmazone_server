@@ -1,4 +1,4 @@
-﻿import api from './apiClient';
+import api from './apiClient';
 
 const VISITOR_KEY = 'cz_visitor_id';
 const SESSION_KEY = 'cz_session_id';
@@ -61,6 +61,7 @@ export const getOrCreateVisitorId = () => {
     }
     return visitorId;
 };
+export const getVisitorId = getOrCreateVisitorId;
 
 export const getOrCreateSessionId = () => {
     if (typeof window === 'undefined') return 'server_session';
@@ -71,6 +72,7 @@ export const getOrCreateSessionId = () => {
     }
     return sessionId;
 };
+export const getSessionId = getOrCreateSessionId;
 
 export const getDeviceType = () => {
     if (typeof window === 'undefined') return 'desktop';

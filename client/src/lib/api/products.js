@@ -22,6 +22,16 @@ export const productParams = {
         return await api.get('/products/' + id);
     },
 
+    fetchByIds: async (ids = []) => {
+        if (!ids || ids.length === 0) return [];
+        try {
+            return await api.get('/products', { ids: ids.join(',') });
+        } catch (err) {
+            console.error('Failed to fetch products by IDs:', err);
+            return [];
+        }
+    },
+
     fetchByCategory: async (category) => {
         return await api.get('/products', { category, activeOnly: 'true' });
     },

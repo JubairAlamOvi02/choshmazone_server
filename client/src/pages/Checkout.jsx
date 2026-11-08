@@ -8,8 +8,10 @@ import Input from '../components/Input';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import api from '../lib/apiClient';
 import { orderParams } from '../lib/api/orders';
-import { supabase } from '../lib/supabaseClient';
+import { productParams } from '../lib/api/products';
+import { trackMetaPurchase, trackMetaInitiateCheckout } from '../lib/metaPixel';
 import { getDistricts, getThanas, calculateDeliveryCharge } from '../data/bangladeshLocations';
 import { sendTelegramOrderNotification } from '../lib/telegramNotifier';
 import { sendNtfyOrderNotification } from '../lib/ntfyNotifier';
@@ -65,13 +67,8 @@ const Checkout = () => {
 
         // Track Initiate Checkout
         if (cartItems.length > 0) {
-            if (typeof window !== 'undefined' && window.fbq) {
-                window.fbq('track', 'InitiateCheckout', {
-                    value: cartTotal,
-                    currency: 'BDT',
-                    num_items: cartItems.length
-                });
-            }
+            // Meta Pixel InitiateCheckout with External ID
+            trackMetaInitiateCheckout(cartItems, cartTotal, { userId: user?.id });
 
             // Web Log Analytics Initiate Checkout
             trackEvent('initiate_checkout', {
@@ -286,12 +283,7 @@ const Checkout = () => {
         try {
             const itemIds = cartItems.map(item => item.id).filter(Boolean);
             if (itemIds.length > 0) {
-                const { data: latestProducts, error: productsError } = await supabase
-                    .from('products')
-                    .select('id, name, stock_quantity, variants, is_active')
-                    .in('id', itemIds);
-
-                if (productsError) throw productsError;
+                const latestProducts = await productParams.fetchByIds(itemIds);
 
                 const outOfStock = [];
 
@@ -359,7 +351,7 @@ const Checkout = () => {
             const fName = nameParts[0] || (formData.name.trim() || 'Valued');
             const lName = nameParts.slice(1).join(' ') || (formData.name.trim() ? '' : 'Customer');
 
-            const supabaseOrderData = {
+            const orderPayload = {
                 user_id: user?.id || null,
                 total_amount: totalWithDelivery,
                 status: 'pending',
@@ -394,21 +386,8 @@ const Checkout = () => {
                             maxHeight: 1400,
                             maxSizeBytes: 120 * 1024
                         });
-                        const fileName = `rx_${Date.now()}_${Math.random().toString(36).substring(7)}-${compressedFile.name}`;
-                        const { data: uploadData, error: uploadErr } = await supabase.storage
-                            .from('products')
-                            .upload(`prescriptions/${fileName}`, compressedFile, {
-                                contentType: compressedFile.type || 'image/webp',
-                                cacheControl: '31536000, public',
-                                upsert: false
-                            });
-
-                        if (!uploadErr && uploadData) {
-                            const { data: publicUrlData } = supabase.storage
-                                .from('products')
-                                .getPublicUrl(`prescriptions/${fileName}`);
-                            uploadedPrescriptionUrl = publicUrlData?.publicUrl || '';
-                        }
+                        const uploadRes = await api.upload(compressedFile);
+                        uploadedPrescriptionUrl = uploadRes?.url || '';
                     } catch (e) {
                         console.warn('Prescription image upload skipped or failed:', e);
                     }
@@ -419,7 +398,7 @@ const Checkout = () => {
                 };
             }));
 
-            const createdOrder = await orderParams.create(supabaseOrderData, preparedItems);
+            const createdOrder = await orderParams.create(orderPayload, preparedItems);
 
             const now = new Date();
             const orderDisplayId = createdOrder?.id ? createdOrder.id.slice(0, 8).toUpperCase() : `ORD-${Date.now()}`;
@@ -492,16 +471,21 @@ const Checkout = () => {
                 body: JSON.stringify(legacyOrderData)
             }).catch(err => console.error("Google Sheets Sync Failed:", err));
 
-            // Track Purchase event with Facebook Pixel
-            if (typeof window !== 'undefined' && window.fbq) {
-                window.fbq('track', 'Purchase', {
-                    value: Number(totalWithDelivery.toFixed(2)),
-                    currency: 'BDT',
-                    content_ids: cartItems.map(item => String(item.id)),
-                    content_type: 'product',
-                    num_items: cartItems.reduce((acc, item) => acc + item.quantity, 0)
-                });
-            }
+            // Track Purchase event with Meta Pixel (Enhanced with External ID, Browser ID & Advanced Matching)
+            trackMetaPurchase({
+                orderId: createdOrder?.id || orderDisplayId,
+                totalAmount: totalWithDelivery,
+                items: preparedItems.map(item => ({
+                    id: item.id,
+                    quantity: item.quantity
+                }))
+            }, {
+                userId: user?.id,
+                phone: cleanPhone || formData.phone,
+                email: formData.email,
+                name: formData.name,
+                district: formData.district
+            });
 
             // Web Log Analytics Purchase event
             trackEvent('purchase', {
@@ -631,13 +615,12 @@ const Checkout = () => {
                                                     )}
                                                 </label>
                                                 {formData.phone && (
-                                                    <span className={`text-[10px] font-bold font-outfit tracking-wider px-2 py-0.5 rounded-full transition-all ${
-                                                        isValidBDPhone(formData.phone) 
-                                                            ? 'bg-emerald-100 text-emerald-700' 
-                                                            : normalizeBDPhone(formData.phone).length === 11 
+                                                    <span className={`text-[10px] font-bold font-outfit tracking-wider px-2 py-0.5 rounded-full transition-all ${isValidBDPhone(formData.phone)
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : normalizeBDPhone(formData.phone).length === 11
                                                                 ? 'bg-amber-100 text-amber-700'
                                                                 : 'bg-gray-100 text-gray-600'
-                                                    }`}>
+                                                        }`}>
                                                         {normalizeBDPhone(formData.phone).length}/11 digits {isValidBDPhone(formData.phone) && '✓'}
                                                     </span>
                                                 )}
@@ -687,9 +670,8 @@ const Checkout = () => {
                                                 placeholder={fieldSettings.email?.placeholder || '(Required for order tracking)'}
                                                 value={formData.email}
                                                 onChange={handleChange}
-                                                className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${
-                                                    formErrors.email ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
-                                                }`}
+                                                className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${formErrors.email ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
+                                                    }`}
                                             />
                                             {formErrors.email && (
                                                 <span className="text-[10px] font-bold text-red-500 font-outfit ml-1">{formErrors.email}</span>
@@ -724,9 +706,8 @@ const Checkout = () => {
                                         placeholder={fieldSettings.name?.placeholder || 'Enter your full name'}
                                         value={formData.name}
                                         onChange={handleChange}
-                                        className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${
-                                            formErrors.name ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
-                                        }`}
+                                        className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${formErrors.name ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
+                                            }`}
                                     />
                                     {formErrors.name && (
                                         <span className="text-[10px] font-bold text-red-500 font-outfit ml-1">{formErrors.name}</span>
@@ -752,9 +733,8 @@ const Checkout = () => {
                                         placeholder={fieldSettings.address?.placeholder || 'Street address, apartment, etc.'}
                                         value={formData.address}
                                         onChange={handleChange}
-                                        className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${
-                                            formErrors.address ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
-                                        }`}
+                                        className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${formErrors.address ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
+                                            }`}
                                     />
                                     {formErrors.address && (
                                         <span className="text-[10px] font-bold text-red-500 font-outfit ml-1">{formErrors.address}</span>
@@ -780,9 +760,8 @@ const Checkout = () => {
                                                 name="district"
                                                 value={formData.district}
                                                 onChange={handleChange}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-outfit text-sm ${
-                                                    formErrors.district ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50 bg-gray-50'
-                                                }`}
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-outfit text-sm ${formErrors.district ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50 bg-gray-50'
+                                                    }`}
                                             >
                                                 <option value="">{fieldSettings.district?.placeholder || 'Select District'}</option>
                                                 {getDistricts().map(district => (
@@ -811,9 +790,8 @@ const Checkout = () => {
                                                 value={formData.thana}
                                                 onChange={handleChange}
                                                 disabled={!formData.district}
-                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-outfit text-sm disabled:bg-gray-100 disabled:cursor-not-allowed ${
-                                                    formErrors.thana ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50 bg-gray-50'
-                                                }`}
+                                                className={`w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all font-outfit text-sm disabled:bg-gray-100 disabled:cursor-not-allowed ${formErrors.thana ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50 bg-gray-50'
+                                                    }`}
                                             >
                                                 <option value="">{fieldSettings.thana?.placeholder || 'Select Thana'}</option>
                                                 {availableThanas.map(thana => (
@@ -851,9 +829,8 @@ const Checkout = () => {
                                                 placeholder={fieldSettings.city?.placeholder || 'City / Area'}
                                                 value={formData.city}
                                                 onChange={handleChange}
-                                                className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${
-                                                    formErrors.city ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
-                                                }`}
+                                                className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${formErrors.city ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
+                                                    }`}
                                             />
                                             {formErrors.city && (
                                                 <span className="text-[10px] font-bold text-red-500 font-outfit ml-1">{formErrors.city}</span>
@@ -878,9 +855,8 @@ const Checkout = () => {
                                                 placeholder={fieldSettings.zip?.placeholder || 'Postal code'}
                                                 value={formData.zip}
                                                 onChange={handleChange}
-                                                className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${
-                                                    formErrors.zip ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
-                                                }`}
+                                                className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm ${formErrors.zip ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
+                                                    }`}
                                             />
                                             {formErrors.zip && (
                                                 <span className="text-[10px] font-bold text-red-500 font-outfit ml-1">{formErrors.zip}</span>
@@ -908,9 +884,8 @@ const Checkout = () => {
                                         placeholder={fieldSettings.notes?.placeholder || 'Notes about your order (e.g. special delivery instructions)'}
                                         value={formData.notes || ''}
                                         onChange={handleChange}
-                                        className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm resize-none ${
-                                            formErrors.notes ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
-                                        }`}
+                                        className={`w-full bg-gray-50 border px-4 py-3 rounded-xl focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-outfit text-sm resize-none ${formErrors.notes ? 'border-red-500 bg-red-50/50 ring-2 ring-red-400/30' : 'border-border/50'
+                                            }`}
                                     />
                                     {formErrors.notes && (
                                         <span className="text-[10px] font-bold text-red-500 font-outfit ml-1">{formErrors.notes}</span>

@@ -23,6 +23,25 @@ This document tracks which features and setup steps are completed, what is in pr
   - PostgreSQL migration scripts (`server/schema.sql`, `server/src/scripts/migrate.js`) with default admin seeder.
   - Enhanced `order_items` table with `selected_color`, `selected_size`, and `variant_id` columns with idempotent migrations.
 
+- [x] **Product Showcase Sections (Dynamic Curated Collection Grids & Admin ShowcaseManager)**:
+  - Built Storefront Product Showcase components (`ProductShowcaseCard.jsx`, `ProductShowcaseSection.jsx`, and `ProductShowcaseList.jsx`) integrated onto homepage (`Home.jsx`) below Featured Collections.
+  - Features 1:1 square product photography, pill "Sale" badge, dual-pricing typography (`Tk 1,190.00` & strikethrough `Tk 1,750.00`), title toggle, and desktop quick action buttons (Add to Cart, Buy Now, View Details).
+  - Built Admin Control Suite at `/admin/showcases` (`ShowcaseManager.jsx`) with multi-section reordering, custom columns (2–5), inventory picker modal, custom image upload via VPS backend, and live preview.
+  - Added `DEFAULT_SHOWCASE_SECTIONS`, `getShowcaseSections()`, and `saveShowcaseSections()` in `src/lib/api/settings.js` storing in PostgreSQL `site_settings`.
+  - Registered route in `App.jsx` and sidebar navigation with `Grid` icon in `AdminLayout.jsx`.
+
+- [x] **Meta Pixel Advanced Matching, Persistent External ID & Event Deduplication**:
+  - Architected dedicated Meta Pixel integration engine in `src/lib/metaPixel.js` with Pixel ID `28809507428687294`.
+  - Implemented Advanced Matching: persistent `visitor_id` as Meta `external_id`, normalized E.164 Bangladeshi phone formatting (`8801XXXXXXXXX`), sanitized email, `fn`, `ln`, `ct`, and `country: 'bd'`.
+  - Synced external IDs across page transitions in `PageMonitor.jsx`.
+  - Integrated `InitiateCheckout` and `Purchase` event tracking in `Checkout.jsx` passing customer identifiers, total amounts, cart items, and deduplication `eventID` for CAPI alignment.
+
+- [x] **Native VPS Decoupled Checkout Stock Engine & Line Item Variant Decoupling**:
+  - Removed all direct Supabase calls from `Checkout.jsx` and replaced with native VPS endpoints (`productParams.fetchByIds` and `api.upload` for prescription slips).
+  - Enhanced Express product routes (`/api/products`) with `?ids=uuid1,uuid2` parameter support for instant batch stock verification.
+  - Decoupled `order_items.variant_id` and added `variant_info` JSONB column in PostgreSQL (`schema.sql` and `routes/orders.js`), safely capturing complete variant attributes and preventing foreign key errors.
+  - Enhanced Admin Orders UI (`Orders.jsx`) with dynamic variant extraction fallback, line item count indicators with 0-item alerts, empty-state warnings for interrupted checkouts, and 30-second periodic auto-refresh for VPS environments.
+
 - [x] **ChoshmaZone Spotlight Video & Image Brand Storytelling Engine**:
   - Built `SpotlightManager.jsx` at `/admin/spotlight` enabling administrators to curate visual brand campaigns, embedded MP4/WebM videos, and lifestyle photography.
   - Developed `ChoshmaZoneSpotlight.jsx` on the homepage (`Home.jsx`) with dynamic video player modals, auto-play/mute controls, product pill links, and responsive card layouts.
