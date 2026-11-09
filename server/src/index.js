@@ -18,6 +18,7 @@ import adminRouter from './routes/admin.js';
 import wishlistRouter from './routes/wishlist.js';
 import uploadRouter from './routes/upload.js';
 import catalogRouter from './routes/catalog.js';
+import { runMigration } from './scripts/migrate.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,10 +67,20 @@ app.use((err, req, res, next) => {
     });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-    console.log('===============================================');
-    console.log(`🚀 Choshmazone Backend running on port ${PORT}`);
-    console.log(`🌐 Base URL: http://localhost:${PORT}`);
-    console.log(`📁 Uploads served at: http://localhost:${PORT}/uploads`);
-    console.log('===============================================');
-});
+async function startServer() {
+    try {
+        await runMigration();
+    } catch (err) {
+        console.error('⚠️ [Database Startup Migration Warning]:', err.message);
+    }
+
+    app.listen(PORT, '0.0.0.0', () => {
+        console.log('===============================================');
+        console.log(`🚀 Choshmazone Backend running on port ${PORT}`);
+        console.log(`🌐 Base URL: http://localhost:${PORT}`);
+        console.log(`📁 Uploads served at: http://localhost:${PORT}/uploads`);
+        console.log('===============================================');
+    });
+}
+
+startServer();
