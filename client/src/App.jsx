@@ -58,6 +58,7 @@ const AdminCheckoutSettings = lazy(() => import('./pages/admin/CheckoutSettings'
 const AdminWebLogs = lazy(() => import('./pages/admin/WebLogs'));
 const AdminSpotlight = lazy(() => import('./pages/admin/SpotlightManager'));
 const AdminShowcase = lazy(() => import('./pages/admin/ShowcaseManager'));
+const AdminProfile = lazy(() => import('./pages/admin/AdminProfile'));
 
 function App() {
   return (
@@ -130,6 +131,7 @@ function App() {
                           <Route path="showcases" element={<AdminShowcase />} />
                           <Route path="facebook-catalog" element={<FacebookCatalog />} />
                           <Route path="settings" element={<AdminCheckoutSettings />} />
+                          <Route path="profile" element={<AdminProfile />} />
                         </Route>
                       </Routes>
                     </Suspense>

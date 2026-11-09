@@ -99,23 +99,64 @@ router.get('/me', verifyToken, async (req, res) => {
     }
 });
 
-// Update profile
+// Update profile (Name, Email, Password)
 router.put('/profile', verifyToken, async (req, res) => {
     try {
-        const { full_name, password } = req.body;
+        const { full_name, email, current_password, new_password, password } = req.body;
+        const userId = req.user.id;
+
+        // Fetch current user from database
+        const userRes = await query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (userRes.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found.' });
+        }
+        const currentUser = userRes.rows[0];
+
         const updates = [];
         const values = [];
         let counter = 1;
 
         if (full_name !== undefined) {
-            updates.push('full_name = $' + counter++);
-            values.push(full_name);
+            updates.push(`full_name = $${counter++}`);
+            values.push(full_name.trim());
         }
 
-        if (password) {
+        // Email update
+        if (email && email.trim().toLowerCase() !== currentUser.email) {
+            const normalizedEmail = email.trim().toLowerCase();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(normalizedEmail)) {
+                return res.status(400).json({ error: 'Please enter a valid email address.' });
+            }
+
+            // Check if email already in use
+            const existing = await query('SELECT id FROM users WHERE email = $1 AND id != $2', [normalizedEmail, userId]);
+            if (existing.rows.length > 0) {
+                return res.status(400).json({ error: 'This email address is already in use by another account.' });
+            }
+
+            updates.push(`email = $${counter++}`);
+            values.push(normalizedEmail);
+        }
+
+        // Password update
+        const targetNewPassword = new_password || password;
+        if (targetNewPassword) {
+            if (targetNewPassword.length < 6) {
+                return res.status(400).json({ error: 'New password must be at least 6 characters long.' });
+            }
+
+            // If current_password is provided, check it
+            if (current_password) {
+                const isMatch = await bcrypt.compare(current_password, currentUser.password_hash);
+                if (!isMatch) {
+                    return res.status(400).json({ error: 'Current password is incorrect.' });
+                }
+            }
+
             const salt = await bcrypt.genSalt(10);
-            const password_hash = await bcrypt.hash(password, salt);
-            updates.push('password_hash = $' + counter++);
+            const password_hash = await bcrypt.hash(targetNewPassword, salt);
+            updates.push(`password_hash = $${counter++}`);
             values.push(password_hash);
         }
 
@@ -123,13 +164,22 @@ router.put('/profile', verifyToken, async (req, res) => {
             return res.status(400).json({ error: 'No fields to update provided.' });
         }
 
-        values.push(req.user.id);
-        const q = 'UPDATE users SET ' + updates.join(', ') + ' WHERE id = $' + counter + ' RETURNING id, email, full_name, role, created_at';
+        values.push(userId);
+        const q = `UPDATE users SET ${updates.join(', ')} WHERE id = $${counter} RETURNING id, email, full_name, role, created_at`;
         const result = await query(q, values);
+        const updatedUser = result.rows[0];
 
-        res.json({ user: result.rows[0] });
+        // Generate fresh JWT token with updated email & name
+        const token = generateToken(updatedUser);
+
+        res.json({
+            message: 'Account details updated successfully!',
+            user: updatedUser,
+            token
+        });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[Profile Update Error]:', err);
+        res.status(500).json({ error: err.message || 'Failed to update account.' });
     }
 });
 

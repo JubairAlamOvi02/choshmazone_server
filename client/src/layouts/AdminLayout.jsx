@@ -3,7 +3,8 @@ import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { 
     Menu, X, LayoutDashboard, Box, ShoppingCart, Users, LogOut, Bell, 
     Search, Settings, Glasses, Image as ImageIcon, Facebook, Tags, 
-    Activity, Volume2, VolumeX, Sparkles, Check, ExternalLink, Play, Grid
+    Activity, Volume2, VolumeX, Sparkles, Check, ExternalLink, Play, Grid,
+    Shield
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -197,20 +198,27 @@ const AdminLayout = () => {
                         <AdminNavLink to="/admin/customers" icon={Users} label="Members" isActive={isActive('/admin/customers')} onClick={closeMobileMenu} />
                         <AdminNavLink to="/admin/facebook-catalog" icon={Facebook} label="FB Catalog" isActive={isActive('/admin/facebook-catalog')} onClick={closeMobileMenu} />
                         <AdminNavLink to="/admin/settings" icon={Settings} label="Checkout Form" isActive={isActive('/admin/settings')} onClick={closeMobileMenu} />
+                        <AdminNavLink to="/admin/profile" icon={Shield} label="Admin Security" isActive={isActive('/admin/profile')} onClick={closeMobileMenu} />
                     </nav>
 
                     <div className="p-8 border-t border-border">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-text-muted">
-                                <Users size={20} />
+                        <Link 
+                            to="/admin/profile" 
+                            onClick={closeMobileMenu}
+                            className="flex items-center gap-4 mb-6 p-2 rounded-xl hover:bg-gray-50 transition-colors group cursor-pointer"
+                        >
+                            <div className="w-10 h-10 bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white rounded-xl flex items-center justify-center transition-colors">
+                                <Shield size={20} />
                             </div>
                             <div className="flex flex-col truncate">
-                                <span className="text-xs font-bold text-text-main font-outfit truncate uppercase tracking-wider">
+                                <span className="text-xs font-bold text-text-main font-outfit truncate uppercase tracking-wider group-hover:text-primary transition-colors">
                                     {user?.email?.split('@')[0]}
                                 </span>
-                                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Master Admin</span>
+                                <span className="text-[10px] text-text-muted font-bold uppercase tracking-widest flex items-center gap-1">
+                                    Admin Security →
+                                </span>
                             </div>
-                        </div>
+                        </Link>
                         <button
                             onClick={handleLogout}
                             className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-all font-outfit uppercase tracking-widest text-xs"

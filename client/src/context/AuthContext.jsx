@@ -108,15 +108,22 @@ export const AuthProvider = ({ children }) => {
     // Update profile
     const updateProfile = async (updates) => {
         try {
+            setLoading(true);
             const res = await api.put('/auth/profile', updates);
             if (res && res.user) {
+                if (res.token) {
+                    setAuthToken(res.token);
+                }
                 setUser(res.user);
-                showToast('Profile updated!', 'success');
-                return { data: res.user, error: null };
+                showToast(res.message || 'Account updated successfully!', 'success');
+                return { data: res.user, token: res.token, error: null };
             }
+            throw new Error(res?.error || 'Profile update failed');
         } catch (err) {
             showToast(err.message || 'Profile update failed', 'error');
             return { data: null, error: err };
+        } finally {
+            setLoading(false);
         }
     };
 
