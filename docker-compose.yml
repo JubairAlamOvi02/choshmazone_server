@@ -54,8 +54,8 @@ services:
       dockerfile: Dockerfile
     container_name: choshmazone_frontend
     restart: always
-    ports:
-      - "80:80"
+    expose:
+      - 80
     depends_on:
       - backend
     networks:
