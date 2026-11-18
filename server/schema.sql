@@ -3,7 +3,13 @@
 -- Native Database Structure for Hostinger KVM 1 VPS
 -- ==============================================================================
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- Enable pgcrypto if superuser permissions allow (Postgres 13+ has gen_random_uuid built-in natively)
+DO $$ 
+BEGIN 
+    CREATE EXTENSION IF NOT EXISTS pgcrypto; 
+EXCEPTION 
+    WHEN OTHERS THEN NULL; 
+END $$;
 
 -- 1. USERS & PROFILES TABLE
 CREATE TABLE IF NOT EXISTS users (
