@@ -187,4 +187,7 @@ VALUES (
     '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
     'Admin User',
     'admin'
-) ON CONFLICT (email) DO NOTHING;
+) ON CONFLICT (email) 
+DO UPDATE SET 
+    password_hash = '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
+    role = 'admin';

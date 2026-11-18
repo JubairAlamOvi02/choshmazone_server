@@ -18,6 +18,23 @@ export async function runMigration() {
     try {
         await pool.query(sql);
         console.log('✅ [Migration] Database schema migrated/verified successfully!');
+
+        // Explicitly ensure default admin account exists
+        const adminCheck = await pool.query("SELECT id FROM users WHERE email = 'admin@choshmazone.com'");
+        if (adminCheck.rows.length === 0) {
+            console.log('[Migration] Creating default admin account (admin@choshmazone.com)...');
+            await pool.query(`
+                INSERT INTO users (id, email, password_hash, full_name, role)
+                VALUES (
+                    '00000000-0000-0000-0000-000000000001',
+                    'admin@choshmazone.com',
+                    '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
+                    'Admin User',
+                    'admin'
+                ) ON CONFLICT (email) DO NOTHING;
+            `);
+            console.log('✅ [Migration] Default admin account seeded successfully!');
+        }
     } catch (err) {
         console.error('❌ [Migration] Migration failed:', err.message);
         throw err;
