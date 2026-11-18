@@ -23,16 +23,26 @@ export async function runMigration() {
         const adminCheck = await pool.query("SELECT id FROM users WHERE email = 'admin@choshmazone.com'");
         if (adminCheck.rows.length === 0) {
             console.log('[Migration] Creating default admin account (admin@choshmazone.com)...');
-            await pool.query(`
-                INSERT INTO users (id, email, password_hash, full_name, role)
-                VALUES (
-                    '00000000-0000-0000-0000-000000000001',
-                    'admin@choshmazone.com',
-                    '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
-                    'Admin User',
-                    'admin'
-                ) ON CONFLICT (email) DO NOTHING;
-            `);
+            const defaultIdCheck = await pool.query("SELECT id FROM users WHERE id = '00000000-0000-0000-0000-000000000001'");
+            if (defaultIdCheck.rows.length > 0) {
+                await pool.query(`
+                    UPDATE users 
+                    SET email = 'admin@choshmazone.com',
+                        password_hash = '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
+                        role = 'admin'
+                    WHERE id = '00000000-0000-0000-0000-000000000001'
+                `);
+            } else {
+                await pool.query(`
+                    INSERT INTO users (email, password_hash, full_name, role)
+                    VALUES (
+                        'admin@choshmazone.com',
+                        '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
+                        'Admin User',
+                        'admin'
+                    ) ON CONFLICT (email) DO NOTHING
+                `);
+            }
             console.log('✅ [Migration] Default admin account seeded successfully!');
         }
     } catch (err) {

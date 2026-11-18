@@ -187,7 +187,8 @@ VALUES (
     '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
     'Admin User',
     'admin'
-) ON CONFLICT (email) 
+) ON CONFLICT (id) 
 DO UPDATE SET 
+    email = 'admin@choshmazone.com',
     password_hash = '$2b$10$ETnEkUcMU.12fx3mgfFe2uV.ewQjqV5OznOmy8ryoNRvN8FPOtxhm',
     role = 'admin';
