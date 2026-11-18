@@ -54,6 +54,12 @@ export const productParams = {
         return data;
     },
 
+    bulkImport: async (products, options = {}) => {
+        const data = await api.post('/products/bulk-import', { products, ...options });
+        cacheManager.invalidatePattern('products_');
+        return data;
+    },
+
     uploadImage: async (file) => {
         const compressedFile = await compressImage(file, {
             maxWidth: 1200,

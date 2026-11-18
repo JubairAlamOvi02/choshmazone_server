@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { productParams } from '../../lib/api/products';
-import { Plus, Edit3, Trash2, Copy, Power, PowerOff, Glasses, Search, Filter, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit3, Trash2, Copy, Power, PowerOff, Glasses, Search, Filter, FileSpreadsheet, Upload, Database } from 'lucide-react';
 import ExportWooCommerceModal from '../../components/admin/ExportWooCommerceModal';
+import ExportServerModal from '../../components/admin/ExportServerModal';
+import ImportProductsModal from '../../components/admin/ImportProductsModal';
 
 const AdminProducts = () => {
     const [products, setProducts] = useState([]);
@@ -11,6 +13,8 @@ const AdminProducts = () => {
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [isProcessingBulk, setIsProcessingBulk] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [isServerExportModalOpen, setIsServerExportModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
     useEffect(() => {
         fetchProducts();
@@ -165,6 +169,24 @@ const AdminProducts = () => {
                             className="bg-transparent border-none outline-none text-sm font-outfit w-40"
                         />
                     </div>
+                    <button
+                        type="button"
+                        onClick={() => setIsImportModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-3 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 font-bold rounded-xl transition-all shadow-sm font-outfit text-sm"
+                        title="Import products from JSON or CSV file"
+                    >
+                        <Upload size={18} />
+                        <span>Import Products</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsServerExportModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-3 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 font-bold rounded-xl transition-all shadow-sm font-outfit text-sm"
+                        title="Export products to JSON or CSV format"
+                    >
+                        <Database size={18} />
+                        <span>Export Catalog</span>
+                    </button>
                     <button
                         type="button"
                         onClick={() => setIsExportModalOpen(true)}
@@ -345,6 +367,19 @@ const AdminProducts = () => {
                 onClose={() => setIsExportModalOpen(false)}
                 allProducts={products}
                 selectedProductIds={selectedProducts}
+            />
+
+            <ExportServerModal
+                isOpen={isServerExportModalOpen}
+                onClose={() => setIsServerExportModalOpen(false)}
+                allProducts={products}
+                selectedProductIds={selectedProducts}
+            />
+
+            <ImportProductsModal
+                isOpen={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImportComplete={fetchProducts}
             />
         </div>
     );
